@@ -4,6 +4,7 @@ This file contains the SeriesModel class which is a class that represents a neur
 
 from supervised_learning.low_level_implementations.feedforward_nn.layers import Input, Dense
 
+
 class SeriesModel:
 
     def __init__(self, layers=None):
