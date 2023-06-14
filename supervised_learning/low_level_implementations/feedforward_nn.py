@@ -26,7 +26,6 @@ class Layer:
     """
 
     def __init__(self):
-
         # Layer (node) neighbours
         self.left_neighbour = None
         self.right_neighbour = None
@@ -90,6 +89,9 @@ class Dense(Layer):
         self.layer_input = left_neighbour.layer_output
         # self.layer_output = None
 
+        # Store this dimension (number of samples in (mini-) batch. Used in backprop calculations
+        self.m_samples = self.layer_input.shape[-1]
+
         # Gradient from right neighbour
         self.grad_input_from_right = right_neighbour.grad_output_to_left
         # self.grad_output_to_left = None
@@ -130,18 +132,27 @@ class Dense(Layer):
 
     def backward_pass(self):
         """
-        This function takes as input dC/dZ_l
-
-        Returns:
-
+        This function takes as input del(J)/del(Z_l) = dZ_l (cost w.r.t layer output) and updates grads for:
+        - dA_l-1 --> Cost w.r.t. layer input
+        - dW_l --> Cost w.r.t. layer weight matrix
+        - db_l --> Cost w.r.t. layer bias vector
         """
-        # TODO
-        # dC/dA_l-1
-        self.grad_output_to_left = None  # TODO
-        # dC/dW_l
-        self.grad_weights = None    # TODO
-        # dC/db_l
-        self.grad_bias = None  # TODO
+        # del(J)/del(A_l-1) --> dA_1 = np.dot(W_2.T, dZ_2)
+        # The order of matmul and inclusion of transpose can be determined by considering d<param> and <param> have same
+        # shapes, and looking at shapes at both sides of equality
+        self.grad_output_to_left = np.dot(self.weights.T, self.grad_input_from_right)
+        assert self.grad_output_to_left == self.layer_input    # Check shape(dA_l-1) == shape(A_l-1)
+
+        # del(J)/del(W_l) = dW_l = dZ_l . del(Z_l)/del(W_l) = (1/m_samples) * np.dot(dZ_2, A_1.T).
+        # Matmul commuted with A transpose to ensure dW_l and W_l have same shape
+        self.grad_weights = (1 / self.m_samples) * np.dot(self.grad_input_from_right, self.layer_input)
+        assert self.grad_weights == self.weights  # Check shape(dW_l) == shape(W_l)
+
+        # del(J)/del(b_l) =  del(J)/del(Z_l) . del(Z_l)/del(b_l) --> dZ_l . 1.
+        # The sum(...axis=1) sums over the sample dimension for dZ_l. The (1 / m_samples) then ensures values are
+        # average bias grads over the samples
+        self.grad_bias = (1 / self.m_samples) * np.sum(self.grad_input_from_right, axis=1, keepdims=True)
+        assert self.grad_bias == self.bias  # Check shape(dW_l) == shape(W_l)
 
 
 class Relu(Layer):
@@ -178,7 +189,7 @@ class Softmax(Layer):
         # dZ = dA * softmax'(Z) = = dA * A * (1 - A)
         # NB: '*' signifies elementwise multiplication
         self.grad_output_to_left = self.grad_output_from_right * \
-            self.layer_output * (1 - self.layer_output)
+                                   self.layer_output * (1 - self.layer_output)
 
 
 # Use to calculate dJ/dA, to pass in as input to Softmax backprop
@@ -208,7 +219,7 @@ class Series:
         self.layers.append(layer)
 
     def forward_pass(self):
-        activations = None    # TODO
+        activations = None  # TODO
         return activations
 
     def connect_forward(self):
@@ -219,7 +230,7 @@ class Series:
             layer.layer_input = self.layers[idx - 1].layer_output
 
     def connect_backward(self):
-        reversed_list = self.layers[::-1]    # [::-1] reverses list to start with final layer
+        reversed_list = self.layers[::-1]  # [::-1] reverses list to start with final layer
         for idx, layer in enumerate(reversed_list):
             if idx == 0:
                 continue
@@ -234,4 +245,3 @@ class Series:
         # Connect up network
         self.connect_forward()
         self.connect_backward()
-
