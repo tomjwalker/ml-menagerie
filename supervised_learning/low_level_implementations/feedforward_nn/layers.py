@@ -1,5 +1,5 @@
 """
-A feedforward neural network implementation using numpy.
+Defines layers: feedforward neural network components. Each layer has a forward pass and a backward pass method.
 
 
 Nomenclature (use these symbols in comments to keep track of equations. Code uses the object parameters)
@@ -14,11 +14,11 @@ Y --> label
 W --> weights
 B --> biases
 
-
 Gradients during backprop: following NN literature convention that e.g. dA_l represents del(Cost)/del(A_l)
 dZ --> grad_preactivation
 dA ---> grad_activation
 ...etc...
+
 
 """
 
@@ -303,77 +303,3 @@ class Softmax(Layer):
         grad_preactivation = grad_activation * self.layer_output * (1 - self.layer_output)
 
         return grad_preactivation
-
-
-class SeriesModel:
-
-    def __init__(self, layers=None):
-        """
-
-        Args:
-            layers (List or None): optional argument to specify network in list form.
-            e.g. [Dense(2), Relu(), Dense(2), Softmax()]
-        """
-
-        # Avoid having empty list in initialisation signature
-        if layers is None:
-            layers = []
-        self.layers = layers
-
-        # Initialise weights
-        self.initialise_weights()
-
-    def __repr__(self):
-
-        # Iterate through all __repr__ methods of layers within the network and concatenate. Add a newline after each
-        # layer
-        repr_str = ""
-        for layer in self.layers:
-            repr_str += layer.__repr__()
-        return repr_str
-
-    def add(self, layer):
-        self.layers.append(layer)
-
-    def initialise_weights(self):
-        prev_neurons = None
-        for layer in self.layers:
-            if isinstance(layer, Input):
-                prev_neurons = layer.network_input_x.shape[0]
-            if isinstance(layer, Dense):
-                layer.initialise_weights(prev_neurons)
-                layer.initialise_bias()
-                prev_neurons = layer.n_neurons
-
-    def forward_pass(self, network_input_x):
-        activation = network_input_x
-        for layer in self.layers:
-            activation = layer(activation, method="forward")
-        return activation
-
-    def backward_pass(self, grad_cost_dyhat):
-        grad = grad_cost_dyhat
-        for layer in reversed(self.layers):
-            grad = layer(grad, method="backward")
-        return grad
-
-
-# Simple demonstration of model
-if __name__ == "__main__":
-
-    # Give a demo input
-    x = np.random.randn(784, 10)
-
-    architecture = [
-            Input(x),
-            Dense(5),
-            Relu(),
-            Dense(10),
-            Softmax(),
-        ]
-
-    model = SeriesModel(
-        layers=architecture,
-    )
-
-    print(model)
