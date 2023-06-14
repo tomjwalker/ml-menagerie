@@ -50,8 +50,8 @@ class Layer:
         This can be added to in subclass (specific layer) representations
         """
         return f"""
-        ========================================================
-        Layer: {self.__class__.__name__}
+        ========================================================================================================
+        Layer: {self.__class__.__name__}\
         """
 
     def __call__(self, input_activation_or_grad, method):
@@ -71,6 +71,21 @@ class Layer:
         """
         Backward pass through layer
         """
+        pass
+
+
+class Input(Layer):
+    """
+    Input layer for feedforward neural network. Allows for all weights of a SeriesModel to be initialised at once.
+    """
+    def __init__(self, network_input_x):
+        super().__init__()
+        self.network_input_x = network_input_x
+
+    def forward_pass(self, input_activation_from_left=None):
+        return self.network_input_x
+
+    def backprop(self, input_grad_from_right=None):
         pass
 
 
@@ -120,37 +135,46 @@ class Dense(Layer):
         self.n_neurons = n_neurons
         self.weight_init_scale = weight_init_scale
 
-        # Initialise weights (functions do this in-place)
-        self.weights = np.zeros((self.n_neurons, self.layer_input))
-        self.bias = np.zeros((self.n_neurons, 1))
-        self.initialise_weights()
-        self.initialise_bias()
-
-        # Initialise grad of weights and bias vector. Same shape as weights and bias, so just copy initialised
-        self.grad_weights = np.zeros((self.n_neurons, self.layer_input))
-        self.grad_bias = np.zeros((self.n_neurons, 1))
+        # State weight and bias attributes. These are initialised in the SeriesModel class once neighbouring layers are
+        # known
+        self.weights = None
+        self.bias = None
+        self.grad_weights = None
+        self.grad_bias = None
 
     def __repr__(self):
         superclass_repr = super().__repr__()
+        if self.weights is None:
+            return superclass_repr + "Weights and bias not initialised yet."
         num_params = self.weights.size + self.bias.size
         dense_stub = f"""
-        Weights shape: ({self.weights.shape}). Bias shape: ({self.bias.shape}. # trainable params: {num_params})
+        Weights shape: ({self.weights.shape}). Bias shape: ({self.bias.shape}. # trainable params: {num_params})\
         """
         return superclass_repr + dense_stub
 
-    def initialise_weights(self):
+    def initialise_weights(self, prev_layer_neurons):
         """
-        Random initialisation of weights to "break symmetry" between hidden units
+        Random initialisation of weights to "break symmetry" between hidden units.
+        Also initialises self.grad_weights to same shape as self.weights.
+
+        Args:
+            prev_layer_neurons (int): number of neurons in previous layer
         """
 
-        self.weights = np.random.randn(self.n_neurons, self.layer_input) * self.weight_init_scale
+        self.weights = np.random.randn(self.n_neurons, prev_layer_neurons) * self.weight_init_scale
+        self.grad_weights = np.zeros_like(self.weights)
 
     def initialise_bias(self):
+        """
+        Random initialisation of bias vector. Also initialises self.grad_bias to same shape as self.bias
+        """
         self.bias = np.zeros((self.n_neurons, 1))
+        self.grad_bias = np.zeros_like(self.bias)
 
     def forward_pass(self, prev_layer_activation):
         """
-
+        This function takes as input A_(l-1), the activation from a previous layer, and returns the preactivation
+        Z_(l) = W_l . A_(l-1) + b_l
         Args:
             prev_layer_activation: A_(l-1)
 
@@ -296,8 +320,30 @@ class SeriesModel:
             layers = []
         self.layers = layers
 
+        # Initialise weights
+        self.initialise_weights()
+
+    def __repr__(self):
+
+        # Iterate through all __repr__ methods of layers within the network and concatenate. Add a newline after each
+        # layer
+        repr_str = ""
+        for layer in self.layers:
+            repr_str += layer.__repr__()
+        return repr_str
+
     def add(self, layer):
         self.layers.append(layer)
+
+    def initialise_weights(self):
+        prev_neurons = None
+        for layer in self.layers:
+            if isinstance(layer, Input):
+                prev_neurons = layer.network_input_x.shape[0]
+            if isinstance(layer, Dense):
+                layer.initialise_weights(prev_neurons)
+                layer.initialise_bias()
+                prev_neurons = layer.n_neurons
 
     def forward_pass(self, network_input_x):
         activation = network_input_x
@@ -310,3 +356,24 @@ class SeriesModel:
         for layer in reversed(self.layers):
             grad = layer(grad, method="backward")
         return grad
+
+
+# Simple demonstration of model
+if __name__ == "__main__":
+
+    # Give a demo input
+    x = np.random.randn(784, 10)
+
+    architecture = [
+            Input(x),
+            Dense(5),
+            Relu(),
+            Dense(10),
+            Softmax(),
+        ]
+
+    model = SeriesModel(
+        layers=architecture,
+    )
+
+    print(model)
