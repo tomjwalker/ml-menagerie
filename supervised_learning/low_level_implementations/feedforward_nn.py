@@ -2,17 +2,19 @@
 A feedforward neural network implementation using numpy.
 
 
+Nomenclature (use these symbols in comments to keep track of equations. Code uses the object parameters)
+========================================================================================================
 
-Maths to code
-=============
+X --> input
+Z --> preactivation
+A --> activation
+Yhat --> prediction
+Y --> label
+W --> weights
+B --> biases
 
-X --> input_X
-Z --> preactivation_Z
-A --> activation_A
-Yhat --> prediction_Yhat
-Y --> label_Y
-W --> weights_W
-B --> biases_B
+
+Gradients during backprop: following NN literature convention that e.g. dA_l represents del(Cost)/del(A_l)
 """
 
 import numpy as np
@@ -151,16 +153,36 @@ class Relu(Layer):
         super().__init__()
 
     def forward_pass(self):
-        # TODO
-        pass
+        # A = ReLU(Z)
+        self.layer_output = np.maximum(0, self.layer_input)
 
     def backward_pass(self):
-        # TODO
-        pass
+        # dZ = dA * ReLU'(Z). ReLU'(Z) becomes a binary mask: 1 where Z>0, 0 otherwise
+        self.grad_output_to_left = self.grad_input_from_right * (self.layer_input > 0)
 
 
 # Softmax
 class Softmax(Layer):
+    """
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward_pass(self):
+        # A = Softmax(Z)
+        self.layer_output = np.exp(self.layer_input) / np.sum(np.exp(self.layer_input), axis=0, keepdims=True)
+
+    def backward_pass(self):
+        # dZ = dA * softmax'(Z) = = dA * A * (1 - A)
+        # NB: '*' signifies elementwise multiplication
+        self.grad_output_to_left = self.grad_output_from_right * \
+            self.layer_output * (1 - self.layer_output)
+
+
+# Use to calculate dJ/dA, to pass in as input to Softmax backprop
+class Output(Layer):
     """
 
     """
