@@ -27,7 +27,18 @@ import numpy as np
 
 class Layer:
     """
+    Base class for layers in feedforward neural network
 
+    Parameters:
+
+    Attributes:
+
+    Methods:
+        __init__: initialise layer
+        __repr__: print representation of layer
+        __call__: call layer (forward or backward pass)
+        forward_pass: forward pass through layer
+        backward_pass: backward pass through layer
     """
 
     def __init__(self):
@@ -51,13 +62,42 @@ class Layer:
         raise ValueError("Invalid method; should be an element of {'forward', 'backward'}")
 
     def forward_pass(self, input_activation_from_left):
+        """
+        Forward pass through layer
+        """
         pass
 
     def backward_pass(self, input_grad_from_right):
+        """
+        Backward pass through layer
+        """
         pass
 
 
 class Dense(Layer):
+    """
+    Dense layer (fully connected layer) for feedforward neural network
+
+    Parameters:
+        n_neurons (int): number of neurons in layer
+        weight_init_scale (float): Sets magnitude of randomised weight initialisation
+
+    Attributes:
+        layer_input (np.array): input to layer
+        m_samples (int): number of samples in input
+        n_neurons (int): number of neurons in layer
+        weight_init_scale (float): Sets magnitude of randomised weight initialisation
+        weights (np.array): weights for layer
+        bias (np.array): bias vector for layer
+        grad_weights (np.array): gradient of weights
+        grad_bias (np.array): gradient of bias vector
+
+    Methods:
+        initialise_weights: randomise weights
+        initialise_bias: randomise bias vector
+        forward_pass: forward pass through layer
+        backward_pass: backward pass through layer
+    """
 
     def __init__(self, n_neurons, weight_init_scale=0.01):
         """
@@ -81,14 +121,14 @@ class Dense(Layer):
         self.weight_init_scale = weight_init_scale
 
         # Initialise weights (functions do this in-place)
-        self.weights = None
-        self.bias = None
+        self.weights = np.zeros((self.n_neurons, self.layer_input))
+        self.bias = np.zeros((self.n_neurons, 1))
         self.initialise_weights()
         self.initialise_bias()
 
         # Initialise grad of weights and bias vector. Same shape as weights and bias, so just copy initialised
-        self.grad_weights = self.weights.copy()
-        self.grad_bias = self.bias.copy()
+        self.grad_weights = np.zeros((self.n_neurons, self.layer_input))
+        self.grad_bias = np.zeros((self.n_neurons, 1))
 
     def __repr__(self):
         superclass_repr = super().__repr__()
@@ -164,7 +204,10 @@ class Dense(Layer):
 
 class Relu(Layer):
     """
+    Relu activation function.
 
+    Forward pass: A = ReLU(Z)
+    Backward pass: dZ = dA * ReLU'(Z). ReLU'(Z) becomes a binary mask: 1 where Z>0, 0 otherwise
     """
 
     def __init__(self):
@@ -172,6 +215,16 @@ class Relu(Layer):
         self.layer_input = None
 
     def forward_pass(self, layer_preactivation):
+        """
+        Relu layer forward pass
+
+        Args:
+            layer_preactivation (np.array): Input to layer, Z_l
+
+        Returns:
+            layer_activation (np.array): Output of layer, A_l
+
+        """
 
         # A = ReLU(Z)
         layer_activation = np.maximum(0, layer_preactivation)
@@ -182,6 +235,16 @@ class Relu(Layer):
         return layer_activation
 
     def backward_pass(self, grad_layer_activation):
+        """
+        Relu layer backprop
+
+        Args:
+            grad_layer_activation (np.array): del(J)/del(A_l) = dA_l (cost w.r.t layer output)
+
+        Returns:
+            grad_layer_preactivation (np.array): del(J)/del(Z_l) = dZ_l (cost w.r.t layer preactivation)
+
+        """
 
         # dZ = dA * ReLU'(Z). ReLU'(Z) becomes a binary mask: 1 where Z>0, 0 otherwise
         grad_layer_preactivation = grad_layer_activation * (self.layer_input > 0)
@@ -218,7 +281,7 @@ class Softmax(Layer):
         return grad_preactivation
 
 
-class Series:
+class SeriesModel:
 
     def __init__(self, layers=None):
         """
@@ -227,6 +290,8 @@ class Series:
             layers (List or None): optional argument to specify network in list form.
             e.g. [Dense(2), Relu(), Dense(2), Softmax()]
         """
+
+        # Avoid having empty list in initialisation signature
         if layers is None:
             layers = []
         self.layers = layers
@@ -245,4 +310,3 @@ class Series:
         for layer in reversed(self.layers):
             grad = layer(grad, method="backward")
         return grad
-
