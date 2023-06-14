@@ -50,7 +50,7 @@ class Layer:
         This can be added to in subclass (specific layer) representations
         """
         return f"""
-        ========================================================================================================
+        ==========================================================================
         Layer: {self.__class__.__name__}\
         """
 
@@ -84,9 +84,6 @@ class Input(Layer):
 
     def forward_pass(self, input_activation_from_left=None):
         return self.network_input_x
-
-    def backprop(self, input_grad_from_right=None):
-        pass
 
 
 class Dense(Layer):

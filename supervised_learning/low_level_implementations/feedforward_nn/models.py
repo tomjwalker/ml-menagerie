@@ -1,8 +1,10 @@
 """
 This file contains the SeriesModel class which is a class that represents a neural network. It is a series of layers
 """
+import numpy as np
 
 from supervised_learning.low_level_implementations.feedforward_nn.layers import Input, Dense
+from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
 
 
 class SeriesModel:
@@ -45,10 +47,15 @@ class SeriesModel:
                 layer.initialise_bias()
                 prev_neurons = layer.n_neurons
 
-    def forward_pass(self, network_input_x):
+    def forward_pass(self, network_input_x: np.array):
+
+        # Input to first layer is the network input
         activation = network_input_x
+
+        # Iterate through layers and perform forward pass
         for layer in self.layers:
             activation = layer(activation, method="forward")
+
         return activation
 
     def backward_pass(self, grad_cost_dyhat):
@@ -56,3 +63,9 @@ class SeriesModel:
         for layer in reversed(self.layers):
             grad = layer(grad, method="backward")
         return grad
+
+    def update_weights_biases(self, optimiser: GradientDescentOptimiser):
+        for layer in self.layers:
+            if isinstance(layer, Dense):
+                layer.weights = optimiser.update(layer.weights, layer.grad_weights)
+                layer.bias = optimiser.update(layer.bias, layer.grad_bias)
