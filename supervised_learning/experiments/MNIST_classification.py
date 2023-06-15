@@ -7,8 +7,8 @@ from supervised_learning.datasets.mnist.data_utils import (load_mnist,
 from supervised_learning.low_level_implementations.feedforward_nn.layers import (Dense, Input, Relu, Softmax)
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
-from supervised_learning.low_level_implementations.feedforward_nn.losses import CategoricalCrossentropyCost
-from supervised_learning.low_level_implementations.feedforward_nn.train import (TrainingTask, train_val_split,
+from supervised_learning.low_level_implementations.feedforward_nn.costs import CategoricalCrossentropyCost
+from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, train_val_split,
                                                                                 batch_generator)
 
 # Load MNIST dataset
