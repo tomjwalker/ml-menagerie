@@ -1,11 +1,12 @@
 import numpy as np
 
 from supervised_learning.datasets.mnist.data_utils import load_mnist, preprocess_mnist, show_digit_samples
-from supervised_learning.low_level_implementations.feedforward_nn.costs import CategoricalCrossentropyCost
+from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import (
+    CategoricalCrossentropyCost, AccuracyMetric)
 from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Input, Relu, Softmax
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
-from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, batch_generator,
+from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask,
                                                                                 train_val_split)
 
 # Load MNIST dataset
@@ -28,11 +29,27 @@ architecture = [
         Dense(10),
         Softmax(),
     ]
-
 # Initialise model
 model = SeriesModel(
     layers=architecture,
 )
 
 print(model)
+
+# Define training task
+training_task = TrainingTask(
+    training_data=(features_train, labels_train),
+    model=model,
+    optimiser=GradientDescentOptimiser(learning_rate=0.01),
+    cost=CategoricalCrossentropyCost(),
+    metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
+)
+
+# Define evaluation task
+evaluation_task = EvaluationTask(
+    evaluation_data=(features_val, labels_val),
+    model=model,
+    metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
+)
+
 

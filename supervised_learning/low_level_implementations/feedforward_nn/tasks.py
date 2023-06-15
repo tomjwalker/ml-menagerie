@@ -7,11 +7,12 @@ X ---> features
 Y ---> labels
 """
 import numpy as np
+from typing import Tuple, Union, List
 
-from supervised_learning.low_level_implementations.feedforward_nn.costs import CategoricalCrossentropyCost
+from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import \
+    (BaseMetric, CategoricalCrossentropyCost, AccuracyMetric)
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
-from supervised_learning.low_level_implementations.feedforward_nn.metrics import accuracy
 
 
 def train_val_split(features, labels, train_fraction=0.8):
@@ -45,128 +46,152 @@ def batch_generator(features_train_or_val, labels_train_or_val, batch_size=32, s
 
 class TrainingTask:
     """
-    A training task is a task that trains a model on a given dataset.
+    A training task defines the training architecture.
 
-    The training task is initialised with a model, an optimiser and a cost function.
-
-    The training task has a train method that takes in a dataset and trains the model on it.
+    It collects together:
+    - The training data
+    - the loss function to be used
+    - the optimiser to be used
+    - optional metrics to be used
+    - when to log checkpoints
 
     Parameters:
+        - training_data: A tuple of (features, labels) of the training data.
         - model: The model to be trained.
         - optimiser: The optimiser to be used for training.
         - cost: The cost function to be used for training.
+        - metrics (optional): A list of metrics to be used for training.
 
     Attributes:
-        - model: The model to be trained.
-        - optimiser: The optimiser to be used for training.
-        - cost: The cost function to be used for training.
+        - features: The features of the training data.
+        - labels: The labels of the training data.
 
     Methods:
         - train: Trains the model on a given dataset.
 
     """
 
-    def __init__(self, model: SeriesModel, optimiser: GradientDescentOptimiser, cost: CategoricalCrossentropyCost):
+    def __init__(
+            self,
+            training_data: Tuple[np.array, np.array],
+            model: SeriesModel,
+            optimiser: GradientDescentOptimiser,
+            cost: CategoricalCrossentropyCost,
+            metrics: Union[None, List[BaseMetric]] = None,
+    ):
+        """
+        Initialises a training task.
 
+        Args:
+            training_data:
+            model:
+            optimiser:
+            cost:
+            metrics:
+        """
+
+        self.features = training_data[0]
+        self.labels = training_data[1]
         self.model = model
         self.optimiser = optimiser
         self.cost = cost
+        self.metrics = metrics
 
-    def train(self, features_train, labels_train, n_epochs=1, batch_size=32):
-
-        # Instantiate batch generator object
-        generator = batch_generator(features_train, labels_train, batch_size=batch_size)
-
-        # Initialise epoch cost log
-        cost_log = []
-
-        # Iterate over epochs
-        for epoch in range(n_epochs):
-
-            # Initialise batch cost log
-            batch_cost_log = []
-
-            # Iterate over batches
-            for batch_X, batch_Y in generator:
-
-                # Forward pass
-                predictions = self.model.forward_pass(batch_X)
-
-                # Calculate cost
-                batch_cost = self.cost.compute_cost(batch_Y, predictions)
-                batch_cost_log.append(batch_cost)
-
-                # Calculate dYhat
-                grad_predictions = self.cost.compute_gradient(batch_Y, predictions)
-
-                # Backward pass
-                self.model.backward_pass(grad_predictions)
-
-                # Update weights
-                self.model.update_weights_biases(self.optimiser)
-
-            cost_log.append(batch_cost)
+    # def train(self, features_train, labels_train, n_epochs=1, batch_size=32):
+    #
+    #     # Instantiate batch generator object
+    #     generator = batch_generator(features_train, labels_train, batch_size=batch_size)
+    #
+    #     # Initialise epoch cost log
+    #     cost_log = []
+    #
+    #     # Iterate over epochs
+    #     for epoch in range(n_epochs):
+    #
+    #         # Initialise batch cost log
+    #         batch_cost_log = []
+    #
+    #         # Iterate over batches
+    #         for batch_X, batch_Y in generator:
+    #
+    #             # Forward pass
+    #             predictions = self.model.forward_pass(batch_X)
+    #
+    #             # Calculate cost
+    #             batch_cost = self.cost(batch_Y, predictions)
+    #             batch_cost_log.append(batch_cost)
+    #
+    #             # Calculate dYhat
+    #             grad_predictions = self.cost.compute_gradient(batch_Y, predictions)
+    #
+    #             # Backward pass
+    #             self.model.backward_pass(grad_predictions)
+    #
+    #             # Update weights
+    #             self.model.update_weights_biases(self.optimiser)
+    #
+    #         cost_log.append(batch_cost_log)
 
 
 class EvaluationTask:
     """
-    An evaluation task is a task that evaluates a model on a given dataset.
+    An evaluation task defines the evaluation architecture.
 
-    The evaluation task is initialised with a model and a cost function.
+    It collects together:
+    - The evaluation data
+    - metrics to be used and logged
 
-    The evaluation task has an evaluate method that takes in a dataset and evaluates the model on it.
-
-    Parameters:
-        - model: The model to be evaluated.
-        - cost: The cost function to be used for evaluation.
     """
 
-    def __init__(self, model: SeriesModel, metrics=[CategoricalCrossentropyCost, accuracy]):
+    def __init__(
+            self,
+            validation_data: Tuple[np.array, np.array],
+            model: SeriesModel,
+            metrics: Union[None, List[BaseMetric]] = None,
+    ):
+
+        self.features = validation_data[0]
+        self.labels = validation_data[1]
 
         self.model = model
         self.metrics = metrics
 
         self.metric_log = {metric.__name__: [] for metric in metrics}
-
-    def evaluate(self, features, labels):
-
-        # Forward pass
-        predictions = self.model.forward_pass(features)
-
-        #
+    #
+    # def evaluate(self, features, labels):
+    #
+    #     # Forward pass
+    #     predictions = self.model.forward_pass(features)
+    #
+    #     #
 
 
 class Loop:
     """
-    A loop is a loop that runs a training task and an evaluation task for a given number of epochs.
-
-    The loop is initialised with a training task, an evaluation task and a dataset.
+    A loop is a runs a training task and an (optional) evaluation task for a given number of epochs.
 
     The loop has a run method that takes in a number of epochs and runs the training and evaluation tasks for that
     number of epochs.
 
     Parameters:
+        - model: The model to be trained.
         - training_task: The training task to be run.
         - evaluation_task: The evaluation task to be run.
-        - features: The features of the dataset.
-        - labels: The labels of the dataset.
-
-    Attributes:
-        - training_task: The training task to be run.
-        - evaluation_task: The evaluation task to be run.
-        - features: The features of the dataset.
-        - labels: The labels of the dataset.
 
     Methods:
         - run: Runs the training and evaluation tasks for a given number of epochs.
     """
 
-    def __init__(self, training_task: TrainingTask, evaluation_task: EvaluationTask, features, labels):
+    def __init__(
+            self,
+            model: SeriesModel,
+            training_task: TrainingTask,
+            evaluation_task: EvaluationTask = None,
+            ):
 
+        self.model = model
         self.training_task = training_task
         self.evaluation_task = evaluation_task
-        self.features = features
-        self.labels = labels
 
     def run(self, n_epochs=1, batch_size=32):
 
@@ -177,4 +202,5 @@ class Loop:
         self.training_task.train(features_train, labels_train, n_epochs=n_epochs, batch_size=batch_size)
 
         # Run evaluation task
-        self.evaluation_task.evaluate(features_val, labels_val)
+        if self.evaluation_task is not None:
+            self.evaluation_task.evaluate(features_val, labels_val)
