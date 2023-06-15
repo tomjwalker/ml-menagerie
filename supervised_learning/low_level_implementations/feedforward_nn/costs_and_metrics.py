@@ -25,14 +25,23 @@ dA ---> grad_activation
 import numpy as np
 
 
-class CategoricalCrossentropyCost:
+class BaseMetric:
+    def __init__(self):
+        self.name = None
+
+    def __call__(self, label, prediction):
+        raise NotImplementedError
+
+
+class CategoricalCrossentropyCost(BaseMetric):
     def __init__(self, epsilon=1e-10):
+        super().__init__()
         self.name = "categorical_crossentropy_loss"
 
         # Small constant to avoid div/0 errors
         self.epsilon = epsilon
 
-    def compute_cost(self, label, prediction):
+    def __call__(self, label, prediction):
 
         # Sum over axis=0 sums loss for each categorical class. Output is a vector containing these costs for all
         # samples
@@ -53,3 +62,24 @@ class CategoricalCrossentropyCost:
         grad_prediction = np.mean(grad_prediction, axis=1)
 
         return grad_prediction
+
+
+class AccuracyMetric(BaseMetric):
+    def __init__(self):
+        super().__init__()
+        self.name = "accuracy"
+
+    def __call__(self, label, prediction):
+
+        # Get number of samples
+        m_samples = label.shape[1]
+
+        # Get number of correct predictions
+        label_categories = np.argmax(label, axis=0)
+        prediction_categories = np.argmax(prediction, axis=0)
+        n_correct = np.sum(label_categories == prediction_categories)
+
+        # Compute accuracy
+        accuracy_over_samples = n_correct / m_samples
+
+        return accuracy_over_samples
