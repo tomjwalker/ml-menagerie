@@ -8,12 +8,10 @@ Y ---> labels
 """
 import numpy as np
 
-from supervised_learning.low_level_implementations.feedforward_nn.costs import \
-    CategoricalCrossentropyCost
-from supervised_learning.low_level_implementations.feedforward_nn.models import \
-    SeriesModel
-from supervised_learning.low_level_implementations.feedforward_nn.optimisers import \
-    GradientDescentOptimiser
+from supervised_learning.low_level_implementations.feedforward_nn.costs import CategoricalCrossentropyCost
+from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
+from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
+from supervised_learning.low_level_implementations.feedforward_nn.metrics import accuracy
 
 
 def train_val_split(features, labels, train_fraction=0.8):
@@ -123,15 +121,19 @@ class EvaluationTask:
         - cost: The cost function to be used for evaluation.
     """
 
-    def __init__(self, model: SeriesModel, cost: CategoricalCrossentropyCost):
+    def __init__(self, model: SeriesModel, metrics=[CategoricalCrossentropyCost, accuracy]):
 
         self.model = model
-        self.cost = cost
+        self.metrics = metrics
+
+        self.metric_log = {metric.__name__: [] for metric in metrics}
 
     def evaluate(self, features, labels):
 
         # Forward pass
         predictions = self.model.forward_pass(features)
+
+        #
 
 
 class Loop:
