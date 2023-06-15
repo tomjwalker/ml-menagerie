@@ -8,9 +8,12 @@ Y ---> labels
 """
 import numpy as np
 
-from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
-from supervised_learning.low_level_implementations.feedforward_nn.losses import CategoricalCrossentropyCost
-from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
+from supervised_learning.low_level_implementations.feedforward_nn.losses import \
+    CategoricalCrossentropyCost
+from supervised_learning.low_level_implementations.feedforward_nn.models import \
+    SeriesModel
+from supervised_learning.low_level_implementations.feedforward_nn.optimisers import \
+    GradientDescentOptimiser
 
 
 def train_val_split(features, labels, val_fraction=0.2):

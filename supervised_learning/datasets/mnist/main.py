@@ -3,11 +3,11 @@ A demonstration of the MNIST dataset and how to load it.
 """
 
 
-from supervised_learning.datasets.mnist.data_utils import load_mnist
-from supervised_learning.datasets.mnist.data_utils import preprocess_mnist
-from supervised_learning.datasets.mnist.data_utils import show_digit_samples
 import numpy as np
 
+from supervised_learning.datasets.mnist.data_utils import (load_mnist,
+                                                           preprocess_mnist,
+                                                           show_digit_samples)
 
 # Load MNIST dataset
 features, labels = load_mnist()
