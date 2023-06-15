@@ -24,6 +24,7 @@ dA ---> grad_activation
 
 import numpy as np
 
+
 class CategoricalCrossentropyCost:
     def __init__(self, epsilon=1e-10):
         self.name = "categorical_crossentropy_loss"
