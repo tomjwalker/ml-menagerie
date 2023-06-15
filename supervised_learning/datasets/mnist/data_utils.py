@@ -128,14 +128,29 @@ def show_digit_samples(features, labels, predictions=None, m_samples=10):
     # Convert sample digits to images
     sample_images = [sample_digit_to_image(digit) for digit in sample_digits.T]
 
-    # Show sample digits
-    fig, axes = plt.subplots(1, m_samples, figsize=(m_samples, 1))
-    for i in range(m_samples):
-        axes[i].imshow(sample_images[i], cmap='gray')
-        axes[i].set_title(np.argmax(sample_labels[:, i]))
-        # If sample_predictions has been created, append it to plot title
+    # Set up the figure and axes
+    n_samples = len(sample_images)
+    n_columns = (n_samples + 1) // 2
+    fig, axes = plt.subplots(2, n_columns, figsize=(n_columns * 4, 6))
+    fig.suptitle('Sample Digits', fontsize=16)
+
+    # Iterate over samples and plot
+    for i, (image, label) in enumerate(zip(sample_images, sample_labels.T)):
+        ax = axes[i // n_columns, i % n_columns]
+        ax.imshow(image, cmap='gray')
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        # Set the title and subtitle
+        title = f'Label: {np.argmax(label)}'
         if predictions is not None:
-            axes[i].set_title(f"{np.argmax(sample_labels[:, i])} ({np.argmax(sample_predictions[:, i])})")
-        axes[i].set_xticks([])
-        axes[i].set_yticks([])
+            prediction = np.argmax(sample_predictions[:, i])
+            subtitle = f'Prediction: {prediction}'
+            ax.set_title(title, color='black')
+            ax.text(0.5, -0.15, subtitle, transform=ax.transAxes, color='green', ha='center')
+        else:
+            ax.set_title(title)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust top margin for title
     plt.show()
+
