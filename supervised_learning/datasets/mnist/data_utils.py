@@ -5,7 +5,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import fetch_openml
 
+
+########################################################################################################################
 # Loading functions
+########################################################################################################################
+
+# Get the directory path of the current module
+module_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Specify a cache directory within the module's directory
+cache_dir = os.path.join(module_dir, "data_cache")
+cache_filename = "mnist_data.cache"
+cache_filepath = os.path.join(cache_dir, cache_filename)
 
 def load_mnist():
     """
@@ -20,11 +31,6 @@ def load_mnist():
 
     """
 
-    # Specify a cache directory within the current directory, which can be used to save/load the dataset locally
-    cache_dir = "./datasets/data_cache"
-    cache_filename = "mnist_data.cache"
-    cache_filepath = f"{cache_dir}/{cache_filename}"
-
     # Check if cache file exists
     if os.path.exists(cache_filepath):
         # Load from cache
@@ -32,7 +38,7 @@ def load_mnist():
 
     else:
         # Create cache directory if it doesn't exist
-        os.makedirs(cache_dir)
+        os.makedirs(cache_dir, exist_ok=True)
         # Fetch MNIST dataset
         mnist = fetch_openml('mnist_784', version=1, cache=True)
         # Save to cache
@@ -45,7 +51,9 @@ def load_mnist():
     return features, labels
 
 
+########################################################################################################################
 # Preprocessing functions
+########################################################################################################################
 
 def preprocess_mnist(features, labels):
     """
