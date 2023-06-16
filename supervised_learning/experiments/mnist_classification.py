@@ -6,7 +6,7 @@ from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metr
 from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Input, Relu, Softmax
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
-from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask,
+from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask, Loop,
                                                                                 train_val_split)
 
 # Load MNIST dataset
@@ -18,12 +18,9 @@ features, labels = preprocess_mnist(features, labels)
 # Show a few samples
 show_digit_samples(features, labels, m_samples=10)
 
-# Split into train and validation sets
-features_train, features_val, labels_train, labels_val = train_val_split(features, labels, train_fraction=0.8)
-
 # Define network architecture as a series of layers
 architecture = [
-        Input(features_train),
+        Input(features),
         Dense(5),
         Relu(),
         Dense(10),
@@ -38,8 +35,6 @@ print(model)
 
 # Define training task
 training_task = TrainingTask(
-    training_data=(features_train, labels_train),
-    model=model,
     optimiser=GradientDescentOptimiser(learning_rate=0.01),
     cost=CategoricalCrossentropyCost(),
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
@@ -47,9 +42,14 @@ training_task = TrainingTask(
 
 # Define evaluation task
 evaluation_task = EvaluationTask(
-    evaluation_data=(features_val, labels_val),
-    model=model,
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
 )
 
-
+# Run training loop
+loop = Loop(
+    dataset=(features, labels),
+    model=model,
+    training_task=training_task,
+    evaluation_task=evaluation_task,
+)
+loop.run(n_epochs=1, batch_size=32)

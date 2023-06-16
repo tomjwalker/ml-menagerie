@@ -8,6 +8,7 @@ Y ---> labels
 """
 import numpy as np
 from typing import Tuple, Union, List
+from tqdm import tqdm
 
 from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import \
     (BaseMetric, CategoricalCrossentropyCost, AccuracyMetric)
@@ -48,122 +49,51 @@ class TrainingTask:
     """
     A training task defines the training architecture.
 
-    It collects together:
-    - The training data
-    - the loss function to be used
-    - the optimiser to be used
-    - optional metrics to be used
-    - when to log checkpoints
-
     Parameters:
-        - training_data: A tuple of (features, labels) of the training data.
-        - model: The model to be trained.
-        - optimiser: The optimiser to be used for training.
-        - cost: The cost function to be used for training.
-        - metrics (optional): A list of metrics to be used for training.
+        - optimiser: The optimiser to be used.
+        - cost: The cost function to be used.
+        - metrics: The metrics to be used and logged.
 
     Attributes:
-        - features: The features of the training data.
-        - labels: The labels of the training data.
-
-    Methods:
-        - train: Trains the model on a given dataset.
-
+        - metric_log: A dictionary of metric names and their corresponding logs.
     """
 
     def __init__(
             self,
-            training_data: Tuple[np.array, np.array],
-            model: SeriesModel,
             optimiser: GradientDescentOptimiser,
             cost: CategoricalCrossentropyCost,
             metrics: Union[None, List[BaseMetric]] = None,
     ):
         """
         Initialises a training task.
-
-        Args:
-            training_data:
-            model:
-            optimiser:
-            cost:
-            metrics:
         """
 
-        self.features = training_data[0]
-        self.labels = training_data[1]
-        self.model = model
         self.optimiser = optimiser
         self.cost = cost
         self.metrics = metrics
 
-    # def train(self, features_train, labels_train, n_epochs=1, batch_size=32):
-    #
-    #     # Instantiate batch generator object
-    #     generator = batch_generator(features_train, labels_train, batch_size=batch_size)
-    #
-    #     # Initialise epoch cost log
-    #     cost_log = []
-    #
-    #     # Iterate over epochs
-    #     for epoch in range(n_epochs):
-    #
-    #         # Initialise batch cost log
-    #         batch_cost_log = []
-    #
-    #         # Iterate over batches
-    #         for batch_X, batch_Y in generator:
-    #
-    #             # Forward pass
-    #             predictions = self.model.forward_pass(batch_X)
-    #
-    #             # Calculate cost
-    #             batch_cost = self.cost(batch_Y, predictions)
-    #             batch_cost_log.append(batch_cost)
-    #
-    #             # Calculate dYhat
-    #             grad_predictions = self.cost.compute_gradient(batch_Y, predictions)
-    #
-    #             # Backward pass
-    #             self.model.backward_pass(grad_predictions)
-    #
-    #             # Update weights
-    #             self.model.update_weights_biases(self.optimiser)
-    #
-    #         cost_log.append(batch_cost_log)
+        self.metric_log = {metric.name: [] for metric in metrics}
 
 
 class EvaluationTask:
     """
     An evaluation task defines the evaluation architecture.
 
-    It collects together:
-    - The evaluation data
-    - metrics to be used and logged
+    Parameters:
+        - metrics: The metrics to be used and logged.
 
+    Attributes:
+        - metric_log: A dictionary of metric names and their corresponding logs.
     """
 
     def __init__(
             self,
-            validation_data: Tuple[np.array, np.array],
-            model: SeriesModel,
             metrics: Union[None, List[BaseMetric]] = None,
     ):
 
-        self.features = validation_data[0]
-        self.labels = validation_data[1]
-
-        self.model = model
         self.metrics = metrics
 
-        self.metric_log = {metric.__name__: [] for metric in metrics}
-    #
-    # def evaluate(self, features, labels):
-    #
-    #     # Forward pass
-    #     predictions = self.model.forward_pass(features)
-    #
-    #     #
+        self.metric_log = {metric.name: [] for metric in metrics}
 
 
 class Loop:
@@ -174,6 +104,7 @@ class Loop:
     number of epochs.
 
     Parameters:
+        - dataset: A tuple of (features, labels) of the training data.
         - model: The model to be trained.
         - training_task: The training task to be run.
         - evaluation_task: The evaluation task to be run.
@@ -184,11 +115,13 @@ class Loop:
 
     def __init__(
             self,
+            dataset: Tuple[np.ndarray, np.ndarray],
             model: SeriesModel,
             training_task: TrainingTask,
             evaluation_task: EvaluationTask = None,
             ):
 
+        self.features, self.labels = dataset
         self.model = model
         self.training_task = training_task
         self.evaluation_task = evaluation_task
@@ -198,9 +131,71 @@ class Loop:
         # Split dataset into training and validation sets
         features_train, features_val, labels_train, labels_val = train_val_split(self.features, self.labels)
 
-        # Run training task
-        self.training_task.train(features_train, labels_train, n_epochs=n_epochs, batch_size=batch_size)
+        # Instantiate batch generator object
+        generator = batch_generator(features_train, labels_train, batch_size=batch_size)
 
-        # Run evaluation task
-        if self.evaluation_task is not None:
-            self.evaluation_task.evaluate(features_val, labels_val)
+        # Initialise epoch cost log
+        cost_log = []
+
+        # Iterate over epochs
+        for epoch in tqdm(range(n_epochs), desc="Training epochs"):
+
+            # Initialise batch cost log
+            batch_cost_log = []
+
+            # Iterate over batches
+            for batch_X, batch_Y in generator:
+
+                # =====================
+                # Train
+                # =====================
+
+                # Forward pass
+                predictions = self.model.forward_pass(batch_X)
+
+                # Calculate cost
+                batch_cost = self.training_task.cost(batch_Y, predictions)
+                batch_cost_log.append(batch_cost)
+
+                # Calculate dYhat
+                grad_predictions = self.training_task.cost.compute_gradient(batch_Y, predictions)
+
+                # Backward pass
+                self.model.backward_pass(grad_predictions)
+
+                # Update weights
+                self.model.update_weights_biases(self.training_task.optimiser)
+
+                # Update training task metrics
+                if self.training_task.metrics is not None:
+                    for metric in self.training_task.metrics:
+                        metric_train = metric(batch_Y, predictions)
+                        self.training_task.metric_log[metric.name].append(metric_train)
+
+                        # Update tqdm progress bar with training metrics
+                        metric_string = " | ".join(
+                            [f"{metric.name}: {metric_train:.4f}" for metric in self.training_task.metrics]
+                        )
+                        tqdm.write(metric_string)
+
+                # =====================
+                # Evaluate
+                # =====================
+
+                if self.evaluation_task is not None:
+
+                    # Forward pass
+                    predictions_val = self.model.forward_pass(features_val)
+
+                    # Update validation task metrics
+                    if self.evaluation_task.metrics is not None:
+                        for metric in self.evaluation_task.metrics:
+                            metric_val = metric(labels_val, predictions_val)
+                            self.evaluation_task.metric_log[metric.name].append(metric_val)
+
+                            # Update tqdm progress bar with validation metrics
+                            metric_string = " | ".join(
+                                [f"{metric.name}: {metric_val:.4f}" for metric in self.evaluation_task.metrics]
+                            )
+                            tqdm.write(metric_string)
+
