@@ -20,7 +20,6 @@ show_digit_samples(features, labels, m_samples=10)
 
 # Define network architecture as a series of layers
 architecture = [
-        Input(features),
         Dense(5),
         Relu(),
         Dense(10),

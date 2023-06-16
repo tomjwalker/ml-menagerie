@@ -203,14 +203,14 @@ class Dense(Layer):
 
         # del(J)/del(W_l) = dW_l = dZ_l . del(Z_l)/del(W_l) = (1/m_samples) * np.dot(dZ_2, A_1.T).
         # Matmul commuted with A transpose to ensure dW_l and W_l have same shape
-        self.grad_weights = (1 / self.m_samples) * np.dot(grad_layer_preactivation, self.layer_input)
-        assert self.grad_weights == self.weights  # Check shape(dW_l) == shape(W_l)
+        self.grad_weights = (1 / self.m_samples) * np.dot(grad_layer_preactivation, self.layer_input.T)
+        assert self.grad_weights.shape == self.weights.shape
 
         # del(J)/del(b_l) =  del(J)/del(Z_l) . del(Z_l)/del(b_l) --> dZ_l . 1.
         # The sum(...axis=1) sums over the sample dimension for dZ_l. The (1 / m_samples) then ensures values are
         # average bias grads over the samples
         self.grad_bias = (1 / self.m_samples) * np.sum(grad_layer_preactivation, axis=1, keepdims=True)
-        assert self.grad_bias == self.bias  # Check shape(dW_l) == shape(W_l)
+        assert self.grad_bias.shape == self.bias.shape
 
         # Update grad for prev layer activation (output left for backprop)
 
@@ -218,7 +218,7 @@ class Dense(Layer):
         # The order of matmul and inclusion of transpose can be determined by considering d<param> and <param> have same
         # shapes, and looking at shapes at both sides of equality
         grad_prev_layer_activation = np.dot(self.weights.T, grad_layer_preactivation)
-        assert grad_prev_layer_activation == self.layer_input    # Check shape(dA_l-1) == shape(A_l-1)
+        assert grad_prev_layer_activation.shape == self.layer_input.shape
 
         return grad_prev_layer_activation
 
@@ -294,6 +294,10 @@ class Softmax(Layer):
         return activation
 
     def backward_pass(self, grad_activation):
+
+        # Get grad_preactivation in a shape which allows broadcasting with self.layer_output
+        # grad_preactivation is currently of shape (n_neurons,). Want (n_neurons, 1)
+        grad_activation = grad_activation.reshape(-1, 1)
 
         # dZ = dA * softmax'(Z) = = dA * A * (1 - A)
         # NB: '*' signifies elementwise multiplication
