@@ -156,6 +156,9 @@ class Loop:
         # Iterate over epochs
         for epoch in tqdm(range(n_epochs), desc="Training epochs", dynamic_ncols=True):
 
+            # Instantiate batch generator object at start of each epoch
+            generator = batch_generator(features_train, labels_train, batch_size=batch_size)
+
             # Initialise batch cost log
             batch_cost_log = []
 
@@ -164,7 +167,8 @@ class Loop:
 
             # Create a new tqdm progress bar for training batches
             # dynamic_ncols ensures that the progress bar doesn't get squashed when the terminal window is resized
-            progress_bar = tqdm(generator, total=n_batches, desc="Training batches", dynamic_ncols=True)
+            print("Number of batches:", n_batches)
+            progress_bar = tqdm(generator, total=n_batches, desc="Training batches", dynamic_ncols=True, leave=False)
 
             # Iterate over batches
             for batch_idx, (batch_X, batch_Y) in enumerate(progress_bar):

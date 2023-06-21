@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from supervised_learning.datasets.mnist.data_utils import load_mnist, preprocess_mnist, show_digit_samples
@@ -23,13 +25,18 @@ def plot_metric_logs(metric_log_training, metric_log_evaluation, metric_name):
     plt.show()
 
 
-def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name):
+def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, metric_log_dir="./data_cache"):
     """
     Saves outputs of the training and evaluation metric logs during the training loop to a subdirectory within the
     current working directory.
     """
-    np.save(f'{metric_name}_training_log.npy', metric_log_training[metric_name])
-    np.save(f'{metric_name}_evaluation_log.npy', metric_log_evaluation[metric_name])
+
+    # If data_cache directory does not exist, create it
+    if not os.path.exists(metric_log_dir):
+        os.makedirs(metric_log_dir)
+
+    np.save(f'{metric_log_dir}/{metric_name}_training_log.npy', metric_log_training[metric_name])
+    np.save(f'{metric_log_dir}/{metric_name}_evaluation_log.npy', metric_log_evaluation[metric_name])
 
 
 # ========================================
@@ -82,7 +89,7 @@ loop = Loop(
 
 # TODO: remove train_abs_samples after debugging
 # loop.run(n_epochs=3, batch_size=32)
-loop.run(n_epochs=20, batch_size=4, train_abs_samples=50, verbose=1)
+loop.run(n_epochs=50, batch_size=16, train_abs_samples=100, verbose=1)
 
 print(loop.training_task.metric_log)
 print(loop.evaluation_task.metric_log)
