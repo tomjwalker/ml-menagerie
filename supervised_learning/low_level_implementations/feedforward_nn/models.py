@@ -3,7 +3,7 @@ This file contains the SeriesModel class which is a class that represents a neur
 """
 import numpy as np
 
-from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Input
+from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
 
 

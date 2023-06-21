@@ -8,7 +8,7 @@ Y ---> labels
 """
 import numpy as np
 from typing import Tuple, Union, List
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import \
     (BaseMetric, CategoricalCrossentropyCost, AccuracyMetric)
@@ -126,10 +126,23 @@ class Loop:
         self.training_task = training_task
         self.evaluation_task = evaluation_task
 
-    def run(self, n_epochs=1, batch_size=32):
+    def run(
+            self,
+            n_epochs: int = 1,
+            batch_size: int = 32,
+            train_fraction: float = 0.8,
+            train_abs_samples: Union[None, int] = None,
+            verbose: int = 1,    # 0: no progress bar, 1: simple print, 2: tqdm progress bar
+    ):
 
         # Split dataset into training and validation sets
-        features_train, features_val, labels_train, labels_val = train_val_split(self.features, self.labels)
+        features_train, features_val, labels_train, labels_val = train_val_split(self.features, self.labels,
+                                                                                 train_fraction=train_fraction)
+
+        # If train_abs samples is an int, use this to truncate the number of training samples
+        if train_abs_samples is not None:
+            features_train = features_train[:, :train_abs_samples]
+            labels_train = labels_train[:, :train_abs_samples]
 
         # Instantiate batch generator object
         generator = batch_generator(features_train, labels_train, batch_size=batch_size)
@@ -137,14 +150,24 @@ class Loop:
         # Initialise epoch cost log
         cost_log = []
 
+        # Get the total number of batches
+        n_batches = features_train.shape[1] // batch_size
+
         # Iterate over epochs
-        for epoch in tqdm(range(n_epochs), desc="Training epochs"):
+        for epoch in tqdm(range(n_epochs), desc="Training epochs", dynamic_ncols=True):
 
             # Initialise batch cost log
             batch_cost_log = []
 
+            # Initialise a dictionary to store metric values
+            metric_values = {}
+
+            # Create a new tqdm progress bar for training batches
+            # dynamic_ncols ensures that the progress bar doesn't get squashed when the terminal window is resized
+            progress_bar = tqdm(generator, total=n_batches, desc="Training batches", dynamic_ncols=True)
+
             # Iterate over batches
-            for batch_X, batch_Y in generator:
+            for batch_idx, (batch_X, batch_Y) in enumerate(progress_bar):
 
                 # =====================
                 # Train
@@ -169,14 +192,12 @@ class Loop:
                 # Update training task metrics
                 if self.training_task.metrics is not None:
                     for metric in self.training_task.metrics:
+                        # Calculate metric
                         metric_train = metric(batch_Y, predictions)
+                        # Append metric to metric log
                         self.training_task.metric_log[metric.name].append(metric_train)
-
-                        # Update tqdm progress bar with training metrics
-                        metric_string = " | ".join(
-                            [f"{metric.name}: {metric_train:.4f}" for metric in self.training_task.metrics]
-                        )
-                        tqdm.write(metric_string)
+                        # Add metric to metric_values dictionary
+                        metric_values[f"Training {metric.name}"] = metric_train
 
                 # =====================
                 # Evaluate
@@ -192,10 +213,35 @@ class Loop:
                         for metric in self.evaluation_task.metrics:
                             metric_val = metric(labels_val, predictions_val)
                             self.evaluation_task.metric_log[metric.name].append(metric_val)
+                            metric_values[f"Evaluation {metric.name}"] = metric_val
 
-                            # Update tqdm progress bar with validation metrics
-                            metric_string = " | ".join(
-                                [f"{metric.name}: {metric_val:.4f}" for metric in self.evaluation_task.metrics]
-                            )
-                            tqdm.write(metric_string)
+                # =====================
+                # Update progress bar
+                # =====================
+
+                # Update progress bar description
+                progress_bar.set_description(f"Training batches (cost: {batch_cost:.4f})")
+
+                # Update progress bar metrics
+                progress_bar.set_postfix(metric_values)
+
+            # =====================
+            # Update epoch cost log
+            # =====================
+
+            # Calculate epoch cost
+            epoch_cost = np.mean(batch_cost_log)
+
+            # Append epoch cost to epoch cost log
+            cost_log.append(epoch_cost)
+
+            # =====================
+            # Update progress bar
+            # =====================
+
+            # Update progress bar description
+            progress_bar.set_description(f"Training epochs (cost: {epoch_cost:.4f})")
+
+            # Update progress bar metrics
+            progress_bar.set_postfix(metric_values)
 

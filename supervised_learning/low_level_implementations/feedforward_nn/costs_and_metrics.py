@@ -36,7 +36,7 @@ class BaseMetric:
 class CategoricalCrossentropyCost(BaseMetric):
     def __init__(self, epsilon=1e-10):
         super().__init__()
-        self.name = "categorical_crossentropy_loss"
+        self.name = "categorical_crossentropy_cost"
 
         # Small constant to avoid div/0 errors
         self.epsilon = epsilon
@@ -52,14 +52,19 @@ class CategoricalCrossentropyCost(BaseMetric):
 
         return cost
 
-    @staticmethod
-    def compute_gradient(label, prediction):
+    def compute_gradient(self, label, prediction):
+
+        # Get number of samples
+        m_samples = label.shape[1]
 
         # Gradient of loss w.r.t. prediction. This is the gradient of the loss for each output node and each sample
-        grad_prediction = -label / prediction
+        grad_prediction = -(1 / m_samples) * label / (prediction + self.epsilon)
 
-        # Mean gradient over samples. Collapses that dimension so that the output is a vector of gradients for each node
-        grad_prediction = np.mean(grad_prediction, axis=1)
+        # Assert that the gradient is of the same shape as the prediction
+        assert grad_prediction.shape == prediction.shape
+
+        # # Mean gradient over samples. Collapses that dimension so that the output is a vector of gradients for each node
+        # grad_prediction = np.mean(grad_prediction, axis=1, keepdims=True)
 
         return grad_prediction
 
