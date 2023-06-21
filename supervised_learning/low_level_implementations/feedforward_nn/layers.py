@@ -74,18 +74,6 @@ class Layer:
         pass
 
 
-class Input(Layer):
-    """
-    Input layer for feedforward neural network. Allows for all weights of a SeriesModel to be initialised at once.
-    """
-    def __init__(self, network_input_x):
-        super().__init__()
-        self.network_input_x = network_input_x
-
-    def forward_pass(self, input_activation_from_left=None):
-        return self.network_input_x
-
-
 class Dense(Layer):
     """
     Dense layer (fully connected layer) for feedforward neural network
@@ -154,11 +142,17 @@ class Dense(Layer):
         Random initialisation of weights to "break symmetry" between hidden units.
         Also initialises self.grad_weights to same shape as self.weights.
 
+        Using He-initialisation to avoid "Dying ReLU problem" (see https://arxiv.org/pdf/1502.01852.pdf)
+
         Args:
             prev_layer_neurons (int): number of neurons in previous layer
         """
 
-        self.weights = np.random.randn(self.n_neurons, prev_layer_neurons) * self.weight_init_scale
+        # He initialisation variance factor
+        stdev_he = np.sqrt(2 / prev_layer_neurons)
+
+        # Random initialisation of weights with He initialisation variance factor
+        self.weights = np.random.randn(self.n_neurons, prev_layer_neurons) * stdev_he
         self.grad_weights = np.zeros_like(self.weights)
 
     def initialise_bias(self):
@@ -194,23 +188,27 @@ class Dense(Layer):
     def backward_pass(self, grad_layer_preactivation):
         """
         This function takes as input del(J)/del(Z_l) = dZ_l (cost w.r.t layer output) and updates grads for:
-        - dA_l-1 --> Cost w.r.t. layer input
-        - dW_l --> Cost w.r.t. layer weight matrix
-        - db_l --> Cost w.r.t. layer bias vector
+        - dA_l-1 --> Cost w.r.t. layer input. Code nomenclature: grad_prev_layer_activation.
+            Shape: (n_neurons_prev_layer, 1)
+        - dW_l --> Cost w.r.t. layer weight matrix. Code nomenclature: self.grad_weights.
+            Shape: (n_neurons, n_neurons_prev_layer)
+        - db_l --> Cost w.r.t. layer bias vector. Code nomenclature: self.grad_bias/.
+            Shape: (n_neurons, 1)
         """
 
         # Update weights and biases
 
-        # del(J)/del(W_l) = dW_l = dZ_l . del(Z_l)/del(W_l) = (1/m_samples) * np.dot(dZ_2, A_1.T).
+        # del(J)/del(W_l) = dW_l = dZ_l . del(Z_l)/del(W_l) = (1/m_samples) * np.dot(dZ_out, A_in.T).
         # Matmul commuted with A transpose to ensure dW_l and W_l have same shape
-        self.grad_weights = (1 / self.m_samples) * np.dot(grad_layer_preactivation, self.layer_input)
-        assert self.grad_weights == self.weights  # Check shape(dW_l) == shape(W_l)
+        # Matmul sums products over the sample dimension. The (1 / m_samples) then ensures values are average weight
+        self.grad_weights = (1 / self.m_samples) * np.dot(grad_layer_preactivation, self.layer_input.T)
+        assert self.grad_weights.shape == self.weights.shape
 
         # del(J)/del(b_l) =  del(J)/del(Z_l) . del(Z_l)/del(b_l) --> dZ_l . 1.
         # The sum(...axis=1) sums over the sample dimension for dZ_l. The (1 / m_samples) then ensures values are
         # average bias grads over the samples
         self.grad_bias = (1 / self.m_samples) * np.sum(grad_layer_preactivation, axis=1, keepdims=True)
-        assert self.grad_bias == self.bias  # Check shape(dW_l) == shape(W_l)
+        assert self.grad_bias.shape == self.bias.shape
 
         # Update grad for prev layer activation (output left for backprop)
 
@@ -218,7 +216,7 @@ class Dense(Layer):
         # The order of matmul and inclusion of transpose can be determined by considering d<param> and <param> have same
         # shapes, and looking at shapes at both sides of equality
         grad_prev_layer_activation = np.dot(self.weights.T, grad_layer_preactivation)
-        assert grad_prev_layer_activation == self.layer_input    # Check shape(dA_l-1) == shape(A_l-1)
+        assert grad_prev_layer_activation.shape == self.layer_input.shape
 
         return grad_prev_layer_activation
 
@@ -270,6 +268,9 @@ class Relu(Layer):
         # dZ = dA * ReLU'(Z). ReLU'(Z) becomes a binary mask: 1 where Z>0, 0 otherwise
         grad_layer_preactivation = grad_layer_activation * (self.layer_input > 0)
 
+        # Assert shape is same as input
+        assert grad_layer_preactivation.shape == self.layer_input.shape
+
         return grad_layer_preactivation
 
 
@@ -285,18 +286,62 @@ class Softmax(Layer):
 
     def forward_pass(self, preactivation):
 
-        # A = Softmax(Z)
-        activation = np.exp(preactivation) / np.sum(np.exp(preactivation), axis=0, keepdims=True)
+        # Subtract max to avoid overflow
+        preactivation -= np.max(preactivation, axis=0, keepdims=True)
 
-        # Cache for backprop
+        # Exponentiate the values
+        exp_preactivation = np.exp(preactivation)
+
+        # Calculate softmax probabilities
+        activation = exp_preactivation / np.sum(exp_preactivation, axis=0, keepdims=True)
+
+        # # Cache for backprop
         self.layer_output = activation
 
         return activation
 
     def backward_pass(self, grad_activation):
+        """
+        Backprop through softmax layer, as a function of layer cached attributes:
+        - layer output A (self.layer_output)
+        - layer input at backprop, dA (grad_activation)
 
-        # dZ = dA * softmax'(Z) = = dA * A * (1 - A)
-        # NB: '*' signifies elementwise multiplication
-        grad_preactivation = grad_activation * self.layer_output * (1 - self.layer_output)
+        Differential dA/dZ is a Jacobian matrix, with shape (n_neurons, n_neurons). The diagonal elements are:
+        dA_i/dZ_i = A_i * (1 - A_i). The off-diagonal elements are: dA_i/dZ_j = -A_i * A_j. The off-diagonal elements are calculated
+        by multiplying the layer output by its transpose, and subtracting the diagonal elements (which are already
+        calculated).
+
+        Finally, dZ = dA * dA/dZ = dA * Jacobian.
+
+        Shapes:
+        - self.layer_output = A = (n_neurons, m_samples)
+        - grad_activation = dA = (n_neurons, m_samples) (Grad loss w.r.t. layer output, calculated at loss layer,
+        averaged over
+            samples)
+        - grad_preactivation = dZ = (n_neurons, m_samples) (Grad loss w.r.t. layer preactivation, calculated at loss
+            layer, averaged over samples)
+        """
+
+        # Calculate the Jacobian matrix
+        # # Get diagonal elements
+        diag = self.layer_output * (1 - self.layer_output)
+        # # Average over samples
+        diag = np.mean(diag, axis=1, keepdims=True)
+        # # Turn into diagonal matrix
+        diag = np.diag(diag.flatten())
+        # # Get off-diagonal elements
+        off_diag = -np.matmul(self.layer_output, self.layer_output.T)
+        # # Set diagonal elements to 0 (does this in-place)
+        np.fill_diagonal(off_diag, 0)
+        # # Add diagonal and off-diagonal elements
+        jacobian = diag + off_diag
+
+        # Calculate dZ = Jacobian . dA:
+        # # dA is currently of shape (n_neurons, m_samples). Jacobian is of shape (n_neurons, n_neurons). Want dZ to be
+        # # the same shape as Z (n_neurons, m_samples), so matrix multiplication of (Jacobian . dA) ensures this.
+        grad_preactivation = np.matmul(jacobian, grad_activation)
+
+        # Shapes of dA, dZ should be the same (n_neurons, m_samples)
+        assert grad_preactivation.shape == grad_activation.shape
 
         return grad_preactivation

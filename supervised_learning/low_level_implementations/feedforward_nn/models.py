@@ -3,7 +3,7 @@ This file contains the SeriesModel class which is a class that represents a neur
 """
 import numpy as np
 
-from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Input
+from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
 
 
@@ -22,8 +22,11 @@ class SeriesModel:
             layers = []
         self.layers = layers
 
-        # Initialise weights
-        self.initialise_weights()
+        self.input_shape = None
+        self.weights_initialised = False
+
+        # # Initialise weights
+        # self.initialise_weights()
 
     def __repr__(self):
 
@@ -37,17 +40,21 @@ class SeriesModel:
     def add(self, layer):
         self.layers.append(layer)
 
-    def initialise_weights(self):
-        prev_neurons = None
+    def initialise_weights(self, num_units_prev_layer):
         for layer in self.layers:
-            if isinstance(layer, Input):
-                prev_neurons = layer.network_input_x.shape[0]
             if isinstance(layer, Dense):
-                layer.initialise_weights(prev_neurons)
+                layer.initialise_weights(num_units_prev_layer)
                 layer.initialise_bias()
-                prev_neurons = layer.n_neurons
+                num_units_prev_layer = layer.n_neurons
 
     def forward_pass(self, network_input_x: np.array):
+
+        # TODO: replace this with __call__?
+
+        if not self.weights_initialised:
+            # Pass feature dimension if not already initialised
+            self.initialise_weights(network_input_x.shape[0])
+            self.weights_initialised = True
 
         # Input to first layer is the network input
         activation = network_input_x

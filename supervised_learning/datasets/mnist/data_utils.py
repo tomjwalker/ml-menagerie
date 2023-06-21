@@ -160,4 +160,3 @@ def show_digit_samples(features, labels, predictions=None, m_samples=10):
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust top margin for title
     plt.show()
-
