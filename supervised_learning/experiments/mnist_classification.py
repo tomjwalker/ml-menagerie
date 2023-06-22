@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 
 from supervised_learning.datasets.mnist.data_utils import load_mnist, preprocess_mnist, show_digit_samples
 from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import (
@@ -10,18 +11,104 @@ from supervised_learning.low_level_implementations.feedforward_nn.models import 
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
 from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask, Loop,
                                                                                 train_val_split)
+
 import matplotlib.pyplot as plt
+
+
+def summarise_grads_logs(loop, norm_type=2):
+    """
+    If specified in loop.run, the loop will log the gradient norms for each layer. These are stored as a list of
+    dicts of dicts:
+    a. List: Each element corresponds to an iteration.
+    b. Dict: Each key corresponds to a layer.
+    c. Dict: Each key corresponds to either a layer's "weights" or "bias".
+
+    This function calculates the L2 norm of the gradients for each layer, across all iterations, and returns them as a
+    Pandas DataFrame where:
+    a. Rows are iteration numbers
+    b. Columns are a combination of layer and weight/bias (e.g. "layer_1_weights", "layer_2_bias", etc.)
+    """
+
+    grads_log = loop.grads_log
+
+    # Loop over internal dictionaries, and calculate norm of each weight array
+    grads_log_norms = {}
+    for k, v in grads_log.items():
+        grads_log_norms[k] = {arr_name: np.linalg.norm(arr, ord=norm_type) for arr_name, arr in v.items()}
+
+    # <>.T ensures ordering of `n_iterations` rows x `n_weight_arrays` columns
+    norm_df = pd.DataFrame(grads_log_norms).T
+
+    return norm_df
 
 
 def plot_metric_logs(metric_log_training, metric_log_evaluation, metric_name):
     """
     Plots outputs of the training and evaluation metric logs during the training loop.
     """
-    plt.plot(metric_log_training[metric_name], label='Training')
-    plt.plot(metric_log_evaluation[metric_name], label='Evaluation')
-    plt.xlabel('Epoch')
+    plt.plot(metric_log_training[metric_name], label="Training")
+    plt.plot(metric_log_evaluation[metric_name], label="Evaluation")
+    plt.xlabel("Iteration number")
     plt.ylabel(metric_name)
     plt.legend()
+    plt.show()
+
+
+def plot_gradient_norms(loop):
+    """
+    Plots the L2 norms of the gradients, calculated during back-propagation, for each layer.
+    """
+
+    # Get norm array, from the loop's gradient log
+    norm_df = summarise_grads_logs(loop)
+
+    # Plot the L2 norm of the gradients for each layer
+    plt.plot(norm_df)
+    plt.xlabel("Iteration number")
+    plt.ylabel("Gradient norm")
+
+    # Add legend
+    trace_names = norm_df.columns
+    plt.legend(trace_names, loc="upper right")
+
+    plt.show()
+
+
+def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluation, metric_name, loop):
+    """
+    Function creates a 2x1 subplot, where the top plot is the plot from `plot_metric_logs`, and the bottom plot is
+    the plot from `plot_gradient_norms`.
+    """
+
+    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+
+    # Plot metric logs
+    axs[0].plot(metric_log_training[metric_name], label="Training")
+    axs[0].plot(metric_log_evaluation[metric_name], label="Evaluation")
+    axs[0].set_xlabel("Iteration number")
+    axs[0].set_ylabel(metric_name)
+    axs[0].legend()
+
+    # Plot gradient norms
+    norm_df = summarise_grads_logs(loop)
+    axs[1].plot(norm_df)
+    axs[1].set_xlabel("Iteration number")
+    axs[1].set_ylabel("Gradient norm")
+    axs[1].legend(norm_df.columns, loc="upper right")
+
+    # Draw a vertical line where metric_log_training is at its maximum - on both plots
+    max_metric_log_training = np.argmax(metric_log_training[metric_name])
+    axs[0].axvline(max_metric_log_training, color="black", linestyle="--")
+    axs[1].axvline(max_metric_log_training, color="black", linestyle="--")
+
+    # Get the gradient norm values at the maximum of the metric_log_training.
+    # Display these values on the lower axes
+    max_norms = norm_df.iloc[max_metric_log_training]
+    for i, norm in enumerate(max_norms):
+        axs[1].text(
+            max_metric_log_training, norm, f"{norm:.2f}", horizontalalignment="right", verticalalignment="bottom"
+        )
+
     plt.show()
 
 
@@ -35,8 +122,8 @@ def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, me
     if not os.path.exists(metric_log_dir):
         os.makedirs(metric_log_dir)
 
-    np.save(f'{metric_log_dir}/{metric_name}_training_log.npy', metric_log_training[metric_name])
-    np.save(f'{metric_log_dir}/{metric_name}_evaluation_log.npy', metric_log_evaluation[metric_name])
+    np.save(f"{metric_log_dir}/{metric_name}_training_log.npy", metric_log_training[metric_name])
+    np.save(f"{metric_log_dir}/{metric_name}_evaluation_log.npy", metric_log_evaluation[metric_name])
 
 
 # ========================================
@@ -65,7 +152,7 @@ model = SeriesModel(
     layers=architecture,
 )
 
-print(model)
+# print(model)
 
 # Define training task
 training_task = TrainingTask(
@@ -89,7 +176,8 @@ loop = Loop(
 
 # TODO: remove train_abs_samples after debugging
 # loop.run(n_epochs=3, batch_size=32)
-loop.run(n_epochs=50, batch_size=16, train_abs_samples=100, verbose=1)
+# loop.run(n_epochs=1, batch_size=32, train_abs_samples=100, verbose=1, log_grads=True)
+loop.run(n_epochs=30, batch_size=32, train_abs_samples=500, verbose=1, log_grads=True)
 
 print(loop.training_task.metric_log)
 print(loop.evaluation_task.metric_log)
@@ -97,7 +185,7 @@ print(loop.evaluation_task.metric_log)
 
 # Plot training and evaluation metric logs
 for metric in loop.training_task.metric_log.keys():
-    plot_metric_logs(loop.training_task.metric_log, loop.evaluation_task.metric_log, metric)
     save_metric_logs(loop.training_task.metric_log, loop.evaluation_task.metric_log, metric)
+    plot_metric_logs_vs_gradient_norms(loop.training_task.metric_log, loop.evaluation_task.metric_log, metric, loop)
 
 

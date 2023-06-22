@@ -34,12 +34,14 @@ class BaseMetric:
 
 
 class CategoricalCrossentropyCost(BaseMetric):
-    def __init__(self, epsilon=1e-10):
+    def __init__(self, epsilon=1e-15, clip_gradient=True):
         super().__init__()
         self.name = "categorical_crossentropy_cost"
 
         # Small constant to avoid div/0 errors
         self.epsilon = epsilon
+
+        self.clip_gradient = clip_gradient
 
     def __call__(self, label, prediction):
 
@@ -63,8 +65,9 @@ class CategoricalCrossentropyCost(BaseMetric):
         # Assert that the gradient is of the same shape as the prediction
         assert grad_prediction.shape == prediction.shape
 
-        # # Mean gradient over samples. Collapses that dimension so that the output is a vector of gradients for each node
-        # grad_prediction = np.mean(grad_prediction, axis=1, keepdims=True)
+        # If specified, clip the gradient
+        if self.clip_gradient == True:
+            grad_prediction = np.clip(grad_prediction, -1, 1)
 
         return grad_prediction
 

@@ -126,6 +126,9 @@ class Loop:
         self.training_task = training_task
         self.evaluation_task = evaluation_task
 
+        # If log_grads is True, this list will store the weight gradient logs over training iterations
+        self.grads_log = {}
+
     def run(
             self,
             n_epochs: int = 1,
@@ -133,6 +136,7 @@ class Loop:
             train_fraction: float = 0.8,
             train_abs_samples: Union[None, int] = None,
             verbose: int = 1,    # 0: no progress bar, 1: simple print, 2: tqdm progress bar
+            log_grads: bool = False,
     ):
 
         # Split dataset into training and validation sets
@@ -144,14 +148,10 @@ class Loop:
             features_train = features_train[:, :train_abs_samples]
             labels_train = labels_train[:, :train_abs_samples]
 
-        # Instantiate batch generator object
-        generator = batch_generator(features_train, labels_train, batch_size=batch_size)
-
-        # Initialise epoch cost log
+        # Initialise loop params
         cost_log = []
-
-        # Get the total number of batches
         n_batches = features_train.shape[1] // batch_size
+        iteration_num = 0
 
         # Iterate over epochs
         for epoch in tqdm(range(n_epochs), desc="Training epochs", dynamic_ncols=True):
@@ -188,7 +188,7 @@ class Loop:
                 grad_predictions = self.training_task.cost.compute_gradient(batch_Y, predictions)
 
                 # Backward pass
-                self.model.backward_pass(grad_predictions)
+                self.model.backward_pass(grad_predictions, log_grads=log_grads)
 
                 # Update weights
                 self.model.update_weights_biases(self.training_task.optimiser)
@@ -228,6 +228,18 @@ class Loop:
 
                 # Update progress bar metrics
                 progress_bar.set_postfix(metric_values)
+
+                # =====================
+                # Log gradients
+                # =====================
+
+                if log_grads:
+
+                    # .copy() was necessary, otherwise as the model gradients were updated, the grads_log values from
+                    # previous iterations were also updated
+                    self.grads_log[iteration_num] = self.model.grads.copy()
+
+                iteration_num += 1
 
             # =====================
             # Update epoch cost log

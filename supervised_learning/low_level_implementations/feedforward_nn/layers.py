@@ -21,6 +21,7 @@ dA ---> grad_activation
 
 
 """
+from typing import Union
 
 import numpy as np
 
@@ -137,7 +138,7 @@ class Dense(Layer):
         """
         return superclass_repr + dense_stub
 
-    def initialise_weights(self, prev_layer_neurons):
+    def initialise_weights(self, prev_layer_neurons, random_seed: Union[None, int] = 42):
         """
         Random initialisation of weights to "break symmetry" between hidden units.
         Also initialises self.grad_weights to same shape as self.weights.
@@ -148,10 +149,14 @@ class Dense(Layer):
             prev_layer_neurons (int): number of neurons in previous layer
         """
 
-        # He initialisation variance factor
+        # Set random seed for reproducibility
+        if random_seed is not None:
+            np.random.seed(random_seed)
+
+        # He-initialisation variance factor
         stdev_he = np.sqrt(2 / prev_layer_neurons)
 
-        # Random initialisation of weights with He initialisation variance factor
+        # Random initialisation of weights with He-initialisation variance factor
         self.weights = np.random.randn(self.n_neurons, prev_layer_neurons) * stdev_he
         self.grad_weights = np.zeros_like(self.weights)
 
@@ -196,7 +201,9 @@ class Dense(Layer):
             Shape: (n_neurons, 1)
         """
 
-        # Update weights and biases
+        # ==============================================================================================================
+        # Update weights and biases. These are stored as attributes of the layer
+        # ==============================================================================================================
 
         # del(J)/del(W_l) = dW_l = dZ_l . del(Z_l)/del(W_l) = (1/m_samples) * np.dot(dZ_out, A_in.T).
         # Matmul commuted with A transpose to ensure dW_l and W_l have same shape
@@ -210,7 +217,9 @@ class Dense(Layer):
         self.grad_bias = (1 / self.m_samples) * np.sum(grad_layer_preactivation, axis=1, keepdims=True)
         assert self.grad_bias.shape == self.bias.shape
 
-        # Update grad for prev layer activation (output left for backprop)
+        # ==============================================================================================================
+        # Update grad for prev layer activation (output left for backprop). This is returned to the previous layer
+        # ==============================================================================================================
 
         # del(J)/del(A_l-1) --> dA_1 = np.dot(W_2.T, dZ_2)
         # The order of matmul and inclusion of transpose can be determined by considering d<param> and <param> have same
