@@ -25,8 +25,8 @@ class SeriesModel:
         self.input_shape = None
         self.weights_initialised = False
 
-        # # Initialise weights
-        # self.initialise_weights()
+        # Optional list for storing gradients of weights and biases, if specified in backward pass method
+        self.grads = {}
 
     def __repr__(self):
 
@@ -65,10 +65,25 @@ class SeriesModel:
 
         return activation
 
-    def backward_pass(self, grad_cost_dyhat):
+    def backward_pass(self, grad_cost_dyhat, log_grads=False):
+        # Initial gradient, coming from the cost function
         grad = grad_cost_dyhat
+
+        # Initialise dense layer number as number of dense layers (iterating backwards). -1 to keep indexing Pythonic
+        dense_layer_num = sum(isinstance(layer, Dense) for layer in self.layers) - 1
+
         for layer in reversed(self.layers):
+
+            # Perform backward pass
             grad = layer(grad, method="backward")
+
+            # Log gradients of model parameters (dW, db) if specified
+            if log_grads and isinstance(layer, Dense):
+                self.grads[f"Dense_{dense_layer_num}_weights"] = layer.grad_weights
+                self.grads[f"Dense_{dense_layer_num}_bias"] = layer.grad_bias
+
+                dense_layer_num -= 1
+
         return grad
 
     def update_weights_biases(self, optimiser: GradientDescentOptimiser):
