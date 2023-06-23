@@ -41,11 +41,17 @@ def summarise_grads_logs(loop, norm_type=2):
     return norm_df
 
 
-def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluation, metric_name, loop):
+def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluation, metric_name, loop,
+                                       plot_dir="./plots",
+                                       run_config_suffix=""):
     """
     Function creates a 2x1 subplot, where the top plot is the plot from `plot_metric_logs`, and the bottom plot is
     the plot from `plot_gradient_norms`.
     """
+
+    # Create directory for plots if it doesn't exist
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
 
     fig, axs = plt.subplots(2, 1, figsize=(10, 10))
 
@@ -92,8 +98,12 @@ def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluatio
 
     plt.show()
 
+    # Save plot
+    fig.savefig(f"{plot_dir}/{metric_name}_vs_gradient_norms__{run_config_suffix}.png")
 
-def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, metric_log_dir="./data_cache"):
+
+def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, metric_log_dir="./data_cache",
+                     run_config_suffix=""):
     """
     Saves outputs of the training and evaluation metric logs during the training loop to a subdirectory within the
     current working directory.
@@ -103,8 +113,12 @@ def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, me
     if not os.path.exists(metric_log_dir):
         os.makedirs(metric_log_dir)
 
-    np.save(f"{metric_log_dir}/{metric_name}_training_log.npy", metric_log_training[metric_name])
-    np.save(f"{metric_log_dir}/{metric_name}_evaluation_log.npy", metric_log_evaluation[metric_name])
+    np.save(
+        f"{metric_log_dir}/{metric_name}_training_log__{run_config_suffix}.npy", metric_log_training[metric_name]
+    )
+    np.save(
+        f"{metric_log_dir}/{metric_name}_evaluation_log__{run_config_suffix}.npy", metric_log_evaluation[metric_name]
+    )
 
 
 # ========================================
@@ -113,24 +127,26 @@ def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, me
 
 # Parameters and architecture names. These are used both as parameters into the model/loop, and as filenames for
 # saving the outputs of the training loop
-MODEL_NAME = "mnist_ffnn_dense_50_batchnorm"
-TRAIN_ABS_SAMPLES = 1000
-CLIP_GRADS_NORM = True
 DATA_CACHE_DIR = "./data_cache"
+PLOTS_DIR = "./plots"
+MODEL_WEIGHTS_DIR = "./model_weights"
+
+RUN_SETTINGS = {
+    "model_name": "mnist_ffnn_dense_50_batchnorm",
+    "num_epochs": 5,    # 60
+    "train_abs_samples": 1000,    # TODO: remove this after debugging (set to None) - then full training set is used
+    "clip_grads_norm": True,
+}
 
 # Filepath prefix specifies the run settings as defined above
-filepath_prefix = f"{MODEL_NAME}__train_abs_samples_{TRAIN_ABS_SAMPLES}__clip_grads_norm_{CLIP_GRADS_NORM}"
-
+run_suffix = "__".join([f"{key}_{str(value)}" for key, value in RUN_SETTINGS.items()])
+run_suffix = run_suffix.replace(".", "_")    # If any values are floats, replace "." with "_" for filename
 
 # Load MNIST dataset
 features, labels = load_mnist()
 
 # Preprocess MNIST dataset
 features, labels = preprocess_mnist(features, labels)
-
-# Show a few samples
-# TODO: uncomment after debugging
-# show_digit_samples(features, labels, m_samples=10)
 
 # Define network architecture as a series of layers
 # architecture = [
@@ -176,18 +192,39 @@ loop = Loop(
     evaluation_task=evaluation_task,
 )
 
-# TODO: remove train_abs_samples after debugging
-# loop.run(n_epochs=3, batch_size=32)
-loop.run(n_epochs=5, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
-# loop.run(n_epochs=60, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
-
-print(loop.training_task.metric_log)
-print(loop.evaluation_task.metric_log)
-
+loop.run(
+    n_epochs=RUN_SETTINGS["num_epochs"],
+    batch_size=32,
+    train_abs_samples=RUN_SETTINGS["train_abs_samples"],
+    verbose=1,
+    log_grads=True,
+)
 
 # Plot training and evaluation metric logs
 for metric in loop.training_task.metric_log.keys():
-    save_metric_logs(loop.training_task.metric_log, loop.evaluation_task.metric_log, metric)
-    plot_metric_logs_vs_gradient_norms(loop.training_task.metric_log, loop.evaluation_task.metric_log, metric, loop)
+
+    save_metric_logs(
+        loop.training_task.metric_log,
+        loop.evaluation_task.metric_log,
+        metric,
+        metric_log_dir=DATA_CACHE_DIR,
+        run_config_suffix=run_suffix
+    )
+
+    plot_metric_logs_vs_gradient_norms(
+        loop.training_task.metric_log,
+        loop.evaluation_task.metric_log,
+        metric,
+        loop,
+        plot_dir=PLOTS_DIR,
+        run_config_suffix=run_suffix,
+    )
+
+# Look at some predictions on the evaluation set
+predictions = loop.model.forward_pass(loop.features_val, mode="infer")
+save_filepath = f"{PLOTS_DIR}/sampled_predictions__{run_suffix}.png"
+show_digit_samples(loop.features_val, loop.labels_val, predictions, m_samples=10, save_filepath=save_filepath)
+
+
 
 

@@ -147,6 +147,12 @@ class Loop:
         # If log_grads is True, this list will store the weight gradient logs over training iterations
         self.grads_log = {}
 
+        # Store training and validation sets after split (initialise as None, this will be set in run method)
+        self.features_train = None
+        self.features_val = None
+        self.labels_train = None
+        self.labels_val = None
+
     def run(
             self,
             n_epochs: int = 1,
@@ -160,6 +166,12 @@ class Loop:
         # Split dataset into training and validation sets
         features_train, features_val, labels_train, labels_val = train_val_split(self.features, self.labels,
                                                                                  train_fraction=train_fraction)
+
+        # Store training and validation sets as attributes.
+        self.features_train = features_train
+        self.features_val = features_val
+        self.labels_train = labels_train
+        self.labels_val = labels_val
 
         # If train_abs samples is an int, use this to truncate the number of training samples
         if train_abs_samples is not None:
