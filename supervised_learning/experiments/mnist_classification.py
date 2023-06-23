@@ -6,11 +6,10 @@ import pandas as pd
 from supervised_learning.datasets.mnist.data_utils import load_mnist, preprocess_mnist, show_digit_samples
 from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import (
     CategoricalCrossentropyCost, AccuracyMetric)
-from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Relu, Softmax
+from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Relu, Softmax, BatchNorm
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
-from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask, Loop,
-                                                                                train_val_split)
+from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask, Loop)
 
 import matplotlib.pyplot as plt
 
@@ -40,38 +39,6 @@ def summarise_grads_logs(loop, norm_type=2):
     norm_df = pd.DataFrame(grads_log_norms).T
 
     return norm_df
-
-
-def plot_metric_logs(metric_log_training, metric_log_evaluation, metric_name):
-    """
-    Plots outputs of the training and evaluation metric logs during the training loop.
-    """
-    plt.plot(metric_log_training[metric_name], label="Training")
-    plt.plot(metric_log_evaluation[metric_name], label="Evaluation")
-    plt.xlabel("Iteration number")
-    plt.ylabel(metric_name)
-    plt.legend()
-    plt.show()
-
-
-def plot_gradient_norms(loop):
-    """
-    Plots the L2 norms of the gradients, calculated during back-propagation, for each layer.
-    """
-
-    # Get norm array, from the loop's gradient log
-    norm_df = summarise_grads_logs(loop)
-
-    # Plot the L2 norm of the gradients for each layer
-    plt.plot(norm_df)
-    plt.xlabel("Iteration number")
-    plt.ylabel("Gradient norm")
-
-    # Add legend
-    trace_names = norm_df.columns
-    plt.legend(trace_names, loc="upper right")
-
-    plt.show()
 
 
 def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluation, metric_name, loop):
@@ -109,6 +76,20 @@ def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluatio
             max_metric_log_training, norm, f"{norm:.2f}", horizontalalignment="right", verticalalignment="bottom"
         )
 
+    # Display text for the maximum of the metric_log_training
+    axs[0].text(
+        max_metric_log_training, metric_log_training[metric_name][max_metric_log_training],    # x, y
+        f"{metric_log_training[metric_name][max_metric_log_training]:.2f}",
+        horizontalalignment="right", verticalalignment="bottom"
+    )
+
+    # Display also the equivalent value from the metric_log_evaluation at the same x-coordinate
+    axs[0].text(
+        max_metric_log_training, metric_log_evaluation[metric_name][max_metric_log_training],    # x, y
+        f"{metric_log_evaluation[metric_name][max_metric_log_training]:.2f}",
+        horizontalalignment="right", verticalalignment="top"
+    )
+
     plt.show()
 
 
@@ -141,10 +122,18 @@ features, labels = preprocess_mnist(features, labels)
 # show_digit_samples(features, labels, m_samples=10)
 
 # Define network architecture as a series of layers
+# architecture = [
+#         Dense(50),
+#         Relu(),
+#         Dense(10),
+#         Softmax(),
+#     ]
 architecture = [
         Dense(50),
+        BatchNorm(),
         Relu(),
         Dense(10),
+        BatchNorm(),
         Softmax(),
     ]
 
@@ -154,7 +143,7 @@ training_task = TrainingTask(
     cost=CategoricalCrossentropyCost(),
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
     clip_grads_norm=True,
-    max_norm=3.0,
+    max_norm=5.0,
     norm_type=2,
 )
 

@@ -75,6 +75,9 @@ class TrainingTask:
         Initialises a training task.
         """
 
+        self.mode = "train"    # Passed into models - important for behaviour of certain layers which behave
+        # differently in training and evaluation modes (e.g. batch norm)
+
         self.optimiser = optimiser
         self.cost = cost
         self.metrics = metrics
@@ -103,6 +106,8 @@ class EvaluationTask:
             self,
             metrics: Union[None, List[BaseMetric]] = None,
     ):
+        self.mode = "infer"  # Passed into models - important for behaviour of certain layers which behave
+        # differently in training and evaluation modes (e.g. batch norm)
 
         self.metrics = metrics
 
@@ -191,7 +196,7 @@ class Loop:
                 # =====================
 
                 # Forward pass
-                predictions = self.model.forward_pass(batch_X)
+                predictions = self.model.forward_pass(batch_X, mode=self.training_task.mode)
 
                 # Calculate cost
                 batch_cost = self.training_task.cost(batch_Y, predictions)
@@ -223,7 +228,7 @@ class Loop:
                 if self.evaluation_task is not None:
 
                     # Forward pass
-                    predictions_val = self.model.forward_pass(features_val)
+                    predictions_val = self.model.forward_pass(features_val, mode=self.evaluation_task.mode)
 
                     # Update validation task metrics
                     if self.evaluation_task.metrics is not None:

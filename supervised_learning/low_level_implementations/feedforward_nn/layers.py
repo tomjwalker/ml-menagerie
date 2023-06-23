@@ -55,14 +55,16 @@ class Layer:
         Layer: {self.__class__.__name__}\
         """
 
-    def __call__(self, input_activation_or_grad, method, **backprop_tools):
+    def __call__(self, input_activation_or_grad, method, mode=None, **backprop_tools):
         if method == "forward":
-            return self.forward_pass(input_activation_or_grad)
+            if mode is None:
+                raise ValueError("Must specify mode for forward pass")
+            return self.forward_pass(input_activation_or_grad, mode)
         if method == "backward":
             return self.backward_pass(input_activation_or_grad, **backprop_tools)
         raise ValueError("Invalid method; should be an element of {'forward', 'backward'}")
 
-    def forward_pass(self, input_activation_from_left):
+    def forward_pass(self, input_activation_from_left, mode):
         """
         Forward pass through layer
         """
@@ -168,7 +170,7 @@ class Dense(Layer):
         self.bias = np.zeros((self.n_neurons, 1))
         self.grad_bias = np.zeros_like(self.bias)
 
-    def forward_pass(self, prev_layer_activation):
+    def forward_pass(self, prev_layer_activation, mode):
         """
         This function takes as input A_(l-1), the activation from a previous layer, and returns the preactivation
         Z_(l) = W_l . A_(l-1) + b_l
@@ -254,7 +256,7 @@ class Relu(Layer):
         super().__init__()
         self.layer_input = None
 
-    def forward_pass(self, layer_preactivation):
+    def forward_pass(self, layer_preactivation, mode):
         """
         Relu layer forward pass
 
@@ -309,7 +311,7 @@ class Softmax(Layer):
         super().__init__()
         self.layer_output = None
 
-    def forward_pass(self, preactivation):
+    def forward_pass(self, preactivation, mode):
 
         # Subtract max to avoid overflow
         preactivation -= np.max(preactivation, axis=0, keepdims=True)
@@ -374,5 +376,131 @@ class Softmax(Layer):
 
         # Shapes of dA, dZ should be the same (n_neurons, m_samples)
         assert grad_preactivation.shape == grad_activation.shape
+
+        return grad_preactivation
+
+
+class BatchNorm(Layer):
+    """
+    Batch normalisation layer. Normalises the output of the previous layer, and scales and shifts it by learned
+    parameters.
+
+    Forward pass:
+    - Calculate mean and variance of layer input (mu_Z_l, sigma_Z_l)
+    - Normalise layer input (U_l = (Z_l - mu_Z_l) / sqrt(sigma_Z_l + epsilon))
+    - Scale and shift normalised layer input by learned parameters (V_l = gamma_l * U_l + beta_l)
+
+    Backward pass:
+    - Calculate gradients of gamma and beta (dJ/dgamma_l, dJ/dbeta_l)
+    - Calculate gradients of layer input (dJ/dU_l)
+    - Calculate gradients of layer preactivation (dJ/dZ_l)
+
+    Attributes:
+    - gamma: scale parameter, shape (n_neurons, 1)
+    - beta: shift parameter, shape (n_neurons, 1)
+    - epsilon: small number to avoid division by zero
+    """
+
+    def __init__(self, epsilon=1e-8, momentum=0.9):
+
+        super().__init__()
+
+        # Gamma and beta can't be initialised until the number of neurons in the layer is known, within the context
+        # of the model. Therefore, initialise to None for now.
+        self.gamma = None
+        self.beta = None
+        self.grad_gamma = None
+        self.grad_beta = None
+
+        self.epsilon = epsilon
+
+        # Initialise running mean and variance to None. These will be updated during training.
+        self.running_mean = None
+        self.running_var = None
+
+        # These values, calculated during forward pass, are cached for use during backprop
+        self.input_normalised = None
+
+        # Momentum for running mean and variance
+        self.momentum = momentum
+
+    def initialise_learnable_params(self, n_neurons):
+        """
+        Initialise learnable parameters gamma and beta
+        """
+
+        # Initialise gamma and beta
+        gamma = np.ones((n_neurons, 1))    # No scaling by default
+        beta = np.zeros((n_neurons, 1))    # No shift by default
+
+        return gamma, beta
+
+    def forward_pass(self, input_activation_from_left, mode):
+
+        if self.gamma is None or self.beta is None:
+            # Initialise gamma and beta
+            self.gamma, self.beta = self.initialise_learnable_params(input_activation_from_left.shape[0])
+
+        # Update running mean and variance, if mode == "train". Otherwise use previously calculated values if mode ==
+        # "infer"
+        if mode == "train":
+            # Calculate mean and variance of layer input
+            batch_mean = np.mean(input_activation_from_left, axis=1, keepdims=True)
+            batch_var = np.var(input_activation_from_left, axis=1, keepdims=True)
+            if self.running_mean is None or self.running_var is None:
+                # Initialise running mean and variance, if this is the first forward pass
+                self.running_mean = batch_mean
+                self.running_var = batch_var
+            else:
+                # Exponential moving average of running mean and variance
+                self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
+                self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var
+        elif mode == "infer":
+            # (Use running mean and variance for inference)
+            pass
+        else:
+            raise ValueError("Mode must be either 'train' or 'infer'")
+
+        # Normalise layer input
+        input_normalised = (input_activation_from_left - self.running_mean) / np.sqrt(self.running_var + self.epsilon)
+
+        # Scale and shift normalised layer input by learned parameters
+        layer_activation = self.gamma * input_normalised + self.beta
+
+        # Cache these values for backprop
+        self.input_normalised = input_normalised
+
+        return layer_activation
+
+    def backward_pass(self, input_grad_from_right, **backprop_tools):
+        """
+        Backward pass for batch normalisation layer. Calculate gradients of gamma, beta, layer input and layer
+        preactivation.
+
+        Cutting the corner a bit here, by implementing via
+        https://chrisyeh96.github.io/2017/08/28/deriving-batchnorm-backprop.html
+        """
+
+        # Get number of samples
+        m = input_grad_from_right.shape[1]
+
+        # Calculate gradients of gamma and beta
+        self.grad_gamma = np.sum(input_grad_from_right * self.input_normalised, axis=1, keepdims=True)
+        self.grad_beta = np.sum(input_grad_from_right, axis=1, keepdims=True)
+
+        # Calculate gradients of for input_normalised
+
+        grad_input_normalised = self.gamma * input_grad_from_right
+
+        # Calculate gradients of layer preactivation (see del(J)/del(X) formula in link above)
+        left_hand_term = (1 / m) * self.gamma * (self.running_var + self.epsilon) ** (-1/2)
+        right_hand_term = (-(self.grad_gamma * self.input_normalised) + (m * input_grad_from_right) - self.grad_beta)
+        grad_preactivation = left_hand_term * right_hand_term
+
+        # Check shapes
+        assert self.grad_gamma.shape == self.gamma.shape
+        assert self.grad_beta.shape == self.beta.shape
+        assert grad_input_normalised.shape == self.input_normalised.shape
+        assert grad_preactivation.shape == input_grad_from_right.shape   # Input to layer is same shape as output
 
         return grad_preactivation

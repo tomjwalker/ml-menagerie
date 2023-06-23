@@ -53,7 +53,19 @@ class SeriesModel:
                 layer.initialise_bias()
                 num_units_prev_layer = layer.n_neurons
 
-    def forward_pass(self, network_input_x: np.array):
+    def forward_pass(self, network_input_x: np.array, mode: str = "train"):
+        """
+
+        Args:
+            network_input_x: Input data to the network. Shape (n_features, n_examples)
+            mode: One of {"train", "infer"}. Certain layers may behave differently depending on the mode. For example,
+            batch normalisation layers will update their running mean and variance during training, but will use the
+            previously calculated running mean and variance during inference.
+
+        Returns:
+            np.array: Output of the network. Shape (n_classes, n_examples)
+
+        """
 
         # TODO: replace this with __call__?
 
@@ -67,7 +79,7 @@ class SeriesModel:
 
         # Iterate through layers and perform forward pass
         for layer in self.layers:
-            activation = layer(activation, method="forward")
+            activation = layer(activation, method="forward", mode=mode)
 
         return activation
 
