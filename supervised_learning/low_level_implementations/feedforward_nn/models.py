@@ -5,7 +5,7 @@ from typing import Union
 
 import numpy as np
 
-from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense
+from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, BatchNorm
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
 from supervised_learning.low_level_implementations.feedforward_nn.utils import ClipNorm
 
@@ -89,6 +89,7 @@ class SeriesModel:
 
         # Initialise dense layer number as number of dense layers (iterating backwards). -1 to keep indexing Pythonic
         dense_layer_num = sum(isinstance(layer, Dense) for layer in self.layers) - 1
+        batch_norm_layer_num = sum(isinstance(layer, BatchNorm) for layer in self.layers) - 1
 
         for layer in reversed(self.layers):
 
@@ -97,10 +98,15 @@ class SeriesModel:
 
             # Log gradients of model parameters (dW, db) if specified
             if log_grads and isinstance(layer, Dense):
-                self.grads[f"Dense_{dense_layer_num}_weights"] = layer.grad_weights
-                self.grads[f"Dense_{dense_layer_num}_bias"] = layer.grad_bias
-
+                self.grads[f"Dense_{dense_layer_num}_grad_weights"] = layer.grad_weights
+                self.grads[f"Dense_{dense_layer_num}_grad_bias"] = layer.grad_bias
                 dense_layer_num -= 1
+
+            # Log gradients of model parameters (dgamma, dbeta) if BatchNorm layers are present
+            if log_grads and isinstance(layer, BatchNorm):
+                self.grads[f"BatchNorm_{batch_norm_layer_num}_grad_gamma"] = layer.grad_gamma
+                self.grads[f"BatchNorm_{batch_norm_layer_num}_grad_beta"] = layer.grad_beta
+                batch_norm_layer_num -= 1
 
         return grad
 
@@ -109,3 +115,7 @@ class SeriesModel:
             if isinstance(layer, Dense):
                 layer.weights = optimiser.update(layer.weights, layer.grad_weights)
                 layer.bias = optimiser.update(layer.bias, layer.grad_bias)
+
+            if isinstance(layer, BatchNorm):
+                layer.gamma = optimiser.update(layer.gamma, layer.grad_gamma)
+                layer.beta = optimiser.update(layer.beta, layer.grad_beta)

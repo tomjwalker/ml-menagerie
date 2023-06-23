@@ -430,8 +430,8 @@ class BatchNorm(Layer):
         """
 
         # Initialise gamma and beta
-        gamma = np.ones((n_neurons, 1))    # No scaling by default
-        beta = np.zeros((n_neurons, 1))    # No shift by default
+        gamma = np.ones((n_neurons, 1))    # Initialise with no scaling
+        beta = np.zeros((n_neurons, 1))    # Initialise with no shift
 
         return gamma, beta
 

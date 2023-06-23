@@ -111,6 +111,17 @@ def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, me
 # Main script
 # ========================================
 
+# Parameters and architecture names. These are used both as parameters into the model/loop, and as filenames for
+# saving the outputs of the training loop
+MODEL_NAME = "mnist_ffnn_dense_50_batchnorm"
+TRAIN_ABS_SAMPLES = 1000
+CLIP_GRADS_NORM = True
+DATA_CACHE_DIR = "./data_cache"
+
+# Filepath prefix specifies the run settings as defined above
+filepath_prefix = f"{MODEL_NAME}__train_abs_samples_{TRAIN_ABS_SAMPLES}__clip_grads_norm_{CLIP_GRADS_NORM}"
+
+
 # Load MNIST dataset
 features, labels = load_mnist()
 
@@ -143,8 +154,6 @@ training_task = TrainingTask(
     cost=CategoricalCrossentropyCost(),
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
     clip_grads_norm=True,
-    max_norm=5.0,
-    norm_type=2,
 )
 
 # Initialise model
@@ -169,8 +178,8 @@ loop = Loop(
 
 # TODO: remove train_abs_samples after debugging
 # loop.run(n_epochs=3, batch_size=32)
-# loop.run(n_epochs=1, batch_size=32, train_abs_samples=100, verbose=1, log_grads=True)
-loop.run(n_epochs=30, batch_size=32, train_abs_samples=500, verbose=1, log_grads=True)
+loop.run(n_epochs=5, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
+# loop.run(n_epochs=60, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
 
 print(loop.training_task.metric_log)
 print(loop.evaluation_task.metric_log)
