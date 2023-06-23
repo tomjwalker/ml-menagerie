@@ -134,7 +134,7 @@ MODEL_WEIGHTS_DIR = "./model_weights"
 RUN_SETTINGS = {
     "model_name": "mnist_ffnn_dense_50_batchnorm",
     "num_epochs": 5,    # 60
-    "train_abs_samples": 1000,
+    "train_abs_samples": 1000,    # TODO: remove this after debugging (set to None) - then full training set is used
     "clip_grads_norm": True,
 }
 
@@ -199,11 +199,6 @@ loop.run(
     verbose=1,
     log_grads=True,
 )
-# loop.run(n_epochs=60, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
-
-print(loop.training_task.metric_log)
-print(loop.evaluation_task.metric_log)
-
 
 # Plot training and evaluation metric logs
 for metric in loop.training_task.metric_log.keys():
@@ -226,6 +221,9 @@ for metric in loop.training_task.metric_log.keys():
     )
 
 # Look at some predictions on the evaluation set
+predictions = loop.model.forward_pass(loop.features_val, mode="infer")
+save_filepath = f"{PLOTS_DIR}/sampled_predictions__{run_suffix}.png"
+show_digit_samples(loop.features_val, loop.labels_val, predictions, m_samples=10, save_filepath=save_filepath)
 
 
 

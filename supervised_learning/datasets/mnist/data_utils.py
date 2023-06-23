@@ -105,7 +105,7 @@ def sample_digit_to_image(digit):
     return image
 
 
-def show_digit_samples(features, labels, predictions=None, m_samples=10):
+def show_digit_samples(features, labels, predictions=None, m_samples=10, save_filepath=None):
     """
     Show sample digits from the MNIST dataset.
 
@@ -159,4 +159,8 @@ def show_digit_samples(features, labels, predictions=None, m_samples=10):
             ax.set_title(title)
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust top margin for title
-    plt.show()
+
+    if save_filepath is not None:
+        plt.savefig(save_filepath)
+    else:
+        plt.show()
