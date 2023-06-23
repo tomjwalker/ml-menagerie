@@ -147,18 +147,22 @@ architecture = [
         Dense(10),
         Softmax(),
     ]
-# Initialise model
-model = SeriesModel(
-    layers=architecture,
-)
-
-# print(model)
 
 # Define training task
 training_task = TrainingTask(
     optimiser=GradientDescentOptimiser(learning_rate=0.01),
     cost=CategoricalCrossentropyCost(),
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
+    clip_grads_norm=True,
+    max_norm=3.0,
+    norm_type=2,
+)
+
+# Initialise model
+# TODO: want to separate out coupling between model and training task? Where best to instantiate clip_grads_norm?
+model = SeriesModel(
+    layers=architecture,
+    clip_grads_norm=training_task.clip_grads_norm,
 )
 
 # Define evaluation task

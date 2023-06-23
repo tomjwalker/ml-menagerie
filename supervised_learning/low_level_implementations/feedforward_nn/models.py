@@ -1,15 +1,18 @@
 """
 This file contains the SeriesModel class which is a class that represents a neural network. It is a series of layers
 """
+from typing import Union
+
 import numpy as np
 
 from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
+from supervised_learning.low_level_implementations.feedforward_nn.utils import ClipNorm
 
 
 class SeriesModel:
 
-    def __init__(self, layers=None):
+    def __init__(self, layers=None, clip_grads_norm: Union[None, ClipNorm] = None):
         """
 
         Args:
@@ -27,6 +30,9 @@ class SeriesModel:
 
         # Optional list for storing gradients of weights and biases, if specified in backward pass method
         self.grads = {}
+
+        # Clip grad settings
+        self.clip_grads_norm = clip_grads_norm
 
     def __repr__(self):
 
@@ -75,7 +81,7 @@ class SeriesModel:
         for layer in reversed(self.layers):
 
             # Perform backward pass
-            grad = layer(grad, method="backward")
+            grad = layer(grad, method="backward", clip_grads_norm=self.clip_grads_norm)
 
             # Log gradients of model parameters (dW, db) if specified
             if log_grads and isinstance(layer, Dense):

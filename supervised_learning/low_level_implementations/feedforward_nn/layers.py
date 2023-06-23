@@ -55,11 +55,11 @@ class Layer:
         Layer: {self.__class__.__name__}\
         """
 
-    def __call__(self, input_activation_or_grad, method):
+    def __call__(self, input_activation_or_grad, method, **backprop_tools):
         if method == "forward":
             return self.forward_pass(input_activation_or_grad)
         if method == "backward":
-            return self.backward_pass(input_activation_or_grad)
+            return self.backward_pass(input_activation_or_grad, **backprop_tools)
         raise ValueError("Invalid method; should be an element of {'forward', 'backward'}")
 
     def forward_pass(self, input_activation_from_left):
@@ -68,7 +68,7 @@ class Layer:
         """
         pass
 
-    def backward_pass(self, input_grad_from_right):
+    def backward_pass(self, input_grad_from_right, **backprop_tools):
         """
         Backward pass through layer
         """
@@ -146,6 +146,7 @@ class Dense(Layer):
         Using He-initialisation to avoid "Dying ReLU problem" (see https://arxiv.org/pdf/1502.01852.pdf)
 
         Args:
+            random_seed: If not None, sets random seed for reproducibility
             prev_layer_neurons (int): number of neurons in previous layer
         """
 
@@ -190,7 +191,7 @@ class Dense(Layer):
 
         return layer_preactivation
 
-    def backward_pass(self, grad_layer_preactivation):
+    def backward_pass(self, grad_layer_preactivation, **backprop_tools):
         """
         This function takes as input del(J)/del(Z_l) = dZ_l (cost w.r.t layer output) and updates grads for:
         - dA_l-1 --> Cost w.r.t. layer input. Code nomenclature: grad_prev_layer_activation.
@@ -201,6 +202,11 @@ class Dense(Layer):
             Shape: (n_neurons, 1)
         """
 
+        # Determine if a ClipNorm object has been passed in. If so, clip gradients
+        clip_norm = None
+        if "clip_grads_norm" in backprop_tools:
+            clip_norm = backprop_tools["clip_grads_norm"]
+
         # ==============================================================================================================
         # Update weights and biases. These are stored as attributes of the layer
         # ==============================================================================================================
@@ -209,12 +215,16 @@ class Dense(Layer):
         # Matmul commuted with A transpose to ensure dW_l and W_l have same shape
         # Matmul sums products over the sample dimension. The (1 / m_samples) then ensures values are average weight
         self.grad_weights = (1 / self.m_samples) * np.dot(grad_layer_preactivation, self.layer_input.T)
+        if clip_norm is not None:
+            self.grad_weights = clip_norm(self.grad_weights)
         assert self.grad_weights.shape == self.weights.shape
 
         # del(J)/del(b_l) =  del(J)/del(Z_l) . del(Z_l)/del(b_l) --> dZ_l . 1.
         # The sum(...axis=1) sums over the sample dimension for dZ_l. The (1 / m_samples) then ensures values are
         # average bias grads over the samples
         self.grad_bias = (1 / self.m_samples) * np.sum(grad_layer_preactivation, axis=1, keepdims=True)
+        if clip_norm is not None:
+            self.grad_bias = clip_norm(self.grad_bias)
         assert self.grad_bias.shape == self.bias.shape
 
         # ==============================================================================================================
@@ -225,6 +235,8 @@ class Dense(Layer):
         # The order of matmul and inclusion of transpose can be determined by considering d<param> and <param> have same
         # shapes, and looking at shapes at both sides of equality
         grad_prev_layer_activation = np.dot(self.weights.T, grad_layer_preactivation)
+        if clip_norm is not None:
+            grad_prev_layer_activation = clip_norm(grad_prev_layer_activation)
         assert grad_prev_layer_activation.shape == self.layer_input.shape
 
         return grad_prev_layer_activation
@@ -262,7 +274,7 @@ class Relu(Layer):
 
         return layer_activation
 
-    def backward_pass(self, grad_layer_activation):
+    def backward_pass(self, grad_layer_activation, **backprop_tools):
         """
         Relu layer backprop
 
@@ -276,6 +288,10 @@ class Relu(Layer):
 
         # dZ = dA * ReLU'(Z). ReLU'(Z) becomes a binary mask: 1 where Z>0, 0 otherwise
         grad_layer_preactivation = grad_layer_activation * (self.layer_input > 0)
+
+        if "clip_grads_norm" in backprop_tools:
+            clip_norm = backprop_tools["clip_grads_norm"]
+            grad_layer_preactivation = clip_norm(grad_layer_preactivation)
 
         # Assert shape is same as input
         assert grad_layer_preactivation.shape == self.layer_input.shape
@@ -309,7 +325,7 @@ class Softmax(Layer):
 
         return activation
 
-    def backward_pass(self, grad_activation):
+    def backward_pass(self, grad_activation, **backprop_tools):
         """
         Backprop through softmax layer, as a function of layer cached attributes:
         - layer output A (self.layer_output)
@@ -349,6 +365,12 @@ class Softmax(Layer):
         # # dA is currently of shape (n_neurons, m_samples). Jacobian is of shape (n_neurons, n_neurons). Want dZ to be
         # # the same shape as Z (n_neurons, m_samples), so matrix multiplication of (Jacobian . dA) ensures this.
         grad_preactivation = np.matmul(jacobian, grad_activation)
+
+        # Determine if a ClipNorm object has been passed in. If so, clip gradients
+        clip_norm = None
+        if "clip_grads_norm" in backprop_tools:
+            clip_norm = backprop_tools["clip_grads_norm"]
+            grad_preactivation = clip_norm(grad_preactivation)
 
         # Shapes of dA, dZ should be the same (n_neurons, m_samples)
         assert grad_preactivation.shape == grad_activation.shape
