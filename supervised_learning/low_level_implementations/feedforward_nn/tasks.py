@@ -14,6 +14,7 @@ from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metr
     (BaseMetric, CategoricalCrossentropyCost, AccuracyMetric)
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
+from supervised_learning.low_level_implementations.feedforward_nn.utils import ClipNorm
 
 
 def train_val_split(features, labels, train_fraction=0.8):
@@ -53,26 +54,41 @@ class TrainingTask:
         - optimiser: The optimiser to be used.
         - cost: The cost function to be used.
         - metrics: The metrics to be used and logged.
+        - clip_grads_norm: Whether to clip the gradients norm or not.
+        - clip_kwargs: Keyword arguments to be passed to the ClipNorm object.
 
     Attributes:
         - metric_log: A dictionary of metric names and their corresponding logs.
     """
+
+    DEFAULT_CLIP_GRADS_NORM = {"max_norm": 5.0, "norm_type": 2}
 
     def __init__(
             self,
             optimiser: GradientDescentOptimiser,
             cost: CategoricalCrossentropyCost,
             metrics: Union[None, List[BaseMetric]] = None,
+            clip_grads_norm: bool = False,
+            **clip_kwargs,
     ):
         """
         Initialises a training task.
         """
+
+        self.mode = "train"    # Passed into models - important for behaviour of certain layers which behave
+        # differently in training and evaluation modes (e.g. batch norm)
 
         self.optimiser = optimiser
         self.cost = cost
         self.metrics = metrics
 
         self.metric_log = {metric.name: [] for metric in metrics}
+
+        # If gradient norm clipping is specified, instantiate a ClipNorm object
+        self.clip_grads_norm = None
+        if clip_grads_norm:
+            clip_params = {**TrainingTask.DEFAULT_CLIP_GRADS_NORM, **clip_kwargs}
+            self.clip_grads_norm = ClipNorm(**clip_params)
 
 
 class EvaluationTask:
@@ -90,6 +106,8 @@ class EvaluationTask:
             self,
             metrics: Union[None, List[BaseMetric]] = None,
     ):
+        self.mode = "infer"  # Passed into models - important for behaviour of certain layers which behave
+        # differently in training and evaluation modes (e.g. batch norm)
 
         self.metrics = metrics
 
@@ -178,7 +196,7 @@ class Loop:
                 # =====================
 
                 # Forward pass
-                predictions = self.model.forward_pass(batch_X)
+                predictions = self.model.forward_pass(batch_X, mode=self.training_task.mode)
 
                 # Calculate cost
                 batch_cost = self.training_task.cost(batch_Y, predictions)
@@ -210,7 +228,7 @@ class Loop:
                 if self.evaluation_task is not None:
 
                     # Forward pass
-                    predictions_val = self.model.forward_pass(features_val)
+                    predictions_val = self.model.forward_pass(features_val, mode=self.evaluation_task.mode)
 
                     # Update validation task metrics
                     if self.evaluation_task.metrics is not None:

@@ -1,15 +1,18 @@
 """
 This file contains the SeriesModel class which is a class that represents a neural network. It is a series of layers
 """
+from typing import Union
+
 import numpy as np
 
-from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense
+from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, BatchNorm
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
+from supervised_learning.low_level_implementations.feedforward_nn.utils import ClipNorm
 
 
 class SeriesModel:
 
-    def __init__(self, layers=None):
+    def __init__(self, layers=None, clip_grads_norm: Union[None, ClipNorm] = None):
         """
 
         Args:
@@ -27,6 +30,9 @@ class SeriesModel:
 
         # Optional list for storing gradients of weights and biases, if specified in backward pass method
         self.grads = {}
+
+        # Clip grad settings
+        self.clip_grads_norm = clip_grads_norm
 
     def __repr__(self):
 
@@ -47,7 +53,19 @@ class SeriesModel:
                 layer.initialise_bias()
                 num_units_prev_layer = layer.n_neurons
 
-    def forward_pass(self, network_input_x: np.array):
+    def forward_pass(self, network_input_x: np.array, mode: str = "train"):
+        """
+
+        Args:
+            network_input_x: Input data to the network. Shape (n_features, n_examples)
+            mode: One of {"train", "infer"}. Certain layers may behave differently depending on the mode. For example,
+            batch normalisation layers will update their running mean and variance during training, but will use the
+            previously calculated running mean and variance during inference.
+
+        Returns:
+            np.array: Output of the network. Shape (n_classes, n_examples)
+
+        """
 
         # TODO: replace this with __call__?
 
@@ -61,7 +79,7 @@ class SeriesModel:
 
         # Iterate through layers and perform forward pass
         for layer in self.layers:
-            activation = layer(activation, method="forward")
+            activation = layer(activation, method="forward", mode=mode)
 
         return activation
 
@@ -71,18 +89,24 @@ class SeriesModel:
 
         # Initialise dense layer number as number of dense layers (iterating backwards). -1 to keep indexing Pythonic
         dense_layer_num = sum(isinstance(layer, Dense) for layer in self.layers) - 1
+        batch_norm_layer_num = sum(isinstance(layer, BatchNorm) for layer in self.layers) - 1
 
         for layer in reversed(self.layers):
 
             # Perform backward pass
-            grad = layer(grad, method="backward")
+            grad = layer(grad, method="backward", clip_grads_norm=self.clip_grads_norm)
 
             # Log gradients of model parameters (dW, db) if specified
             if log_grads and isinstance(layer, Dense):
-                self.grads[f"Dense_{dense_layer_num}_weights"] = layer.grad_weights
-                self.grads[f"Dense_{dense_layer_num}_bias"] = layer.grad_bias
-
+                self.grads[f"Dense_{dense_layer_num}_grad_weights"] = layer.grad_weights
+                self.grads[f"Dense_{dense_layer_num}_grad_bias"] = layer.grad_bias
                 dense_layer_num -= 1
+
+            # Log gradients of model parameters (dgamma, dbeta) if BatchNorm layers are present
+            if log_grads and isinstance(layer, BatchNorm):
+                self.grads[f"BatchNorm_{batch_norm_layer_num}_grad_gamma"] = layer.grad_gamma
+                self.grads[f"BatchNorm_{batch_norm_layer_num}_grad_beta"] = layer.grad_beta
+                batch_norm_layer_num -= 1
 
         return grad
 
@@ -91,3 +115,7 @@ class SeriesModel:
             if isinstance(layer, Dense):
                 layer.weights = optimiser.update(layer.weights, layer.grad_weights)
                 layer.bias = optimiser.update(layer.bias, layer.grad_bias)
+
+            if isinstance(layer, BatchNorm):
+                layer.gamma = optimiser.update(layer.gamma, layer.grad_gamma)
+                layer.beta = optimiser.update(layer.beta, layer.grad_beta)

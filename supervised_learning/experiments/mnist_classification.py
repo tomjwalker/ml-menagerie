@@ -6,11 +6,10 @@ import pandas as pd
 from supervised_learning.datasets.mnist.data_utils import load_mnist, preprocess_mnist, show_digit_samples
 from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import (
     CategoricalCrossentropyCost, AccuracyMetric)
-from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Relu, Softmax
+from supervised_learning.low_level_implementations.feedforward_nn.layers import Dense, Relu, Softmax, BatchNorm
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
 from supervised_learning.low_level_implementations.feedforward_nn.optimisers import GradientDescentOptimiser
-from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask, Loop,
-                                                                                train_val_split)
+from supervised_learning.low_level_implementations.feedforward_nn.tasks import (TrainingTask, EvaluationTask, Loop)
 
 import matplotlib.pyplot as plt
 
@@ -40,38 +39,6 @@ def summarise_grads_logs(loop, norm_type=2):
     norm_df = pd.DataFrame(grads_log_norms).T
 
     return norm_df
-
-
-def plot_metric_logs(metric_log_training, metric_log_evaluation, metric_name):
-    """
-    Plots outputs of the training and evaluation metric logs during the training loop.
-    """
-    plt.plot(metric_log_training[metric_name], label="Training")
-    plt.plot(metric_log_evaluation[metric_name], label="Evaluation")
-    plt.xlabel("Iteration number")
-    plt.ylabel(metric_name)
-    plt.legend()
-    plt.show()
-
-
-def plot_gradient_norms(loop):
-    """
-    Plots the L2 norms of the gradients, calculated during back-propagation, for each layer.
-    """
-
-    # Get norm array, from the loop's gradient log
-    norm_df = summarise_grads_logs(loop)
-
-    # Plot the L2 norm of the gradients for each layer
-    plt.plot(norm_df)
-    plt.xlabel("Iteration number")
-    plt.ylabel("Gradient norm")
-
-    # Add legend
-    trace_names = norm_df.columns
-    plt.legend(trace_names, loc="upper right")
-
-    plt.show()
 
 
 def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluation, metric_name, loop):
@@ -109,6 +76,20 @@ def plot_metric_logs_vs_gradient_norms(metric_log_training, metric_log_evaluatio
             max_metric_log_training, norm, f"{norm:.2f}", horizontalalignment="right", verticalalignment="bottom"
         )
 
+    # Display text for the maximum of the metric_log_training
+    axs[0].text(
+        max_metric_log_training, metric_log_training[metric_name][max_metric_log_training],    # x, y
+        f"{metric_log_training[metric_name][max_metric_log_training]:.2f}",
+        horizontalalignment="right", verticalalignment="bottom"
+    )
+
+    # Display also the equivalent value from the metric_log_evaluation at the same x-coordinate
+    axs[0].text(
+        max_metric_log_training, metric_log_evaluation[metric_name][max_metric_log_training],    # x, y
+        f"{metric_log_evaluation[metric_name][max_metric_log_training]:.2f}",
+        horizontalalignment="right", verticalalignment="top"
+    )
+
     plt.show()
 
 
@@ -130,6 +111,17 @@ def save_metric_logs(metric_log_training, metric_log_evaluation, metric_name, me
 # Main script
 # ========================================
 
+# Parameters and architecture names. These are used both as parameters into the model/loop, and as filenames for
+# saving the outputs of the training loop
+MODEL_NAME = "mnist_ffnn_dense_50_batchnorm"
+TRAIN_ABS_SAMPLES = 1000
+CLIP_GRADS_NORM = True
+DATA_CACHE_DIR = "./data_cache"
+
+# Filepath prefix specifies the run settings as defined above
+filepath_prefix = f"{MODEL_NAME}__train_abs_samples_{TRAIN_ABS_SAMPLES}__clip_grads_norm_{CLIP_GRADS_NORM}"
+
+
 # Load MNIST dataset
 features, labels = load_mnist()
 
@@ -141,24 +133,34 @@ features, labels = preprocess_mnist(features, labels)
 # show_digit_samples(features, labels, m_samples=10)
 
 # Define network architecture as a series of layers
+# architecture = [
+#         Dense(50),
+#         Relu(),
+#         Dense(10),
+#         Softmax(),
+#     ]
 architecture = [
         Dense(50),
+        BatchNorm(),
         Relu(),
         Dense(10),
+        BatchNorm(),
         Softmax(),
     ]
-# Initialise model
-model = SeriesModel(
-    layers=architecture,
-)
-
-# print(model)
 
 # Define training task
 training_task = TrainingTask(
     optimiser=GradientDescentOptimiser(learning_rate=0.01),
     cost=CategoricalCrossentropyCost(),
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
+    clip_grads_norm=True,
+)
+
+# Initialise model
+# TODO: want to separate out coupling between model and training task? Where best to instantiate clip_grads_norm?
+model = SeriesModel(
+    layers=architecture,
+    clip_grads_norm=training_task.clip_grads_norm,
 )
 
 # Define evaluation task
@@ -176,8 +178,8 @@ loop = Loop(
 
 # TODO: remove train_abs_samples after debugging
 # loop.run(n_epochs=3, batch_size=32)
-# loop.run(n_epochs=1, batch_size=32, train_abs_samples=100, verbose=1, log_grads=True)
-loop.run(n_epochs=30, batch_size=32, train_abs_samples=500, verbose=1, log_grads=True)
+loop.run(n_epochs=5, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
+# loop.run(n_epochs=60, batch_size=32, train_abs_samples=1000, verbose=1, log_grads=True)
 
 print(loop.training_task.metric_log)
 print(loop.evaluation_task.metric_log)
