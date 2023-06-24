@@ -132,9 +132,9 @@ PLOTS_DIR = "./plots"
 MODEL_WEIGHTS_DIR = "./model_weights"
 
 RUN_SETTINGS = {
-    "model_name": "mnist_ffnn_dense_50_batchnorm",
-    "num_epochs": 5,    # 60
-    "train_abs_samples": 1000,    # TODO: remove this after debugging (set to None) - then full training set is used
+    "model_name": "mnist_ffnn_dense_50_batchnorm_clipnorm",
+    "num_epochs": 10,    # 60
+    "train_abs_samples": None,    # TODO: remove this after debugging (set to None) - then full training set is used
     "clip_grads_norm": True,
 }
 

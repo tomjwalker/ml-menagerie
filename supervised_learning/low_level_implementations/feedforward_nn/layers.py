@@ -481,12 +481,21 @@ class BatchNorm(Layer):
         https://chrisyeh96.github.io/2017/08/28/deriving-batchnorm-backprop.html
         """
 
+        # Determine if a ClipNorm object has been passed in. If so, clip gradients
+        clip_norm = None
+        if "clip_grads_norm" in backprop_tools:
+            clip_norm = backprop_tools["clip_grads_norm"]
+
         # Get number of samples
         m = input_grad_from_right.shape[1]
 
         # Calculate gradients of gamma and beta
         self.grad_gamma = np.sum(input_grad_from_right * self.input_normalised, axis=1, keepdims=True)
+        if clip_norm is not None:
+            self.grad_gamma = clip_norm(self.grad_gamma)
         self.grad_beta = np.sum(input_grad_from_right, axis=1, keepdims=True)
+        if clip_norm is not None:
+            self.grad_beta = clip_norm(self.grad_beta)
 
         # Calculate gradients of for input_normalised
 
@@ -496,6 +505,8 @@ class BatchNorm(Layer):
         left_hand_term = (1 / m) * self.gamma * (self.running_var + self.epsilon) ** (-1/2)
         right_hand_term = (-(self.grad_gamma * self.input_normalised) + (m * input_grad_from_right) - self.grad_beta)
         grad_preactivation = left_hand_term * right_hand_term
+        if clip_norm is not None:
+            grad_preactivation = clip_norm(grad_preactivation)
 
         # Check shapes
         assert self.grad_gamma.shape == self.gamma.shape
