@@ -46,6 +46,24 @@ def batch_generator(features_train_or_val, labels_train_or_val, batch_size=32, s
         yield features_batch, labels_batch
 
 
+class SaveCheckpointDeterminer:
+    """
+    Function checks (at n_iters frequency) whether the current model is the best model so far. If so, it saves the
+    model to a checkpoint file.
+    """
+
+    metric_initialisation = {
+        "accuracy": {"init": 0.0, "how": "maximise"},
+        "categorical_crossentropy_cost": {"init": np.inf, "how": "minimise"}
+    }
+    def __init__(self, metric: BaseMetric, save_every_n_iters: int = 10):
+        self.save_every_n_iters = save_every_n_iters
+
+        self.best_so_far = self.metric_initialisation[metric.name]["init"]
+        self.optimisation_direction = self.metric_initialisation[metric.name]["how"]
+
+
+
 class TrainingTask:
     """
     A training task defines the training architecture.
