@@ -141,13 +141,22 @@ MODEL_CHECKPOINTS_DIR = "./model_checkpoints"
 
 RUN_SETTINGS = {
     "model_name": "mnist_ffnn_dense_50_batchnorm",
-    "num_epochs": 2,  # 60
+    "architecture": [
+        Dense(50),
+        BatchNorm(),
+        Relu(),
+        Dense(10),
+        BatchNorm(),
+        Softmax(),
+    ],
+    "num_epochs": 10,  # 60
     "train_abs_samples": 200,  # TODO: remove this after debugging (set to None) - then full training set is used
     "clip_grads_norm": True,
 }
 
 # Filepath prefix specifies the run settings as defined above
-run_suffix = "__".join([f"{key}_{str(value)}" for key, value in RUN_SETTINGS.items()])
+run_settings_without_architecture = {key: value for key, value in RUN_SETTINGS.items() if key != "architecture"}
+run_suffix = "__".join([f"{key}_{str(value)}" for key, value in run_settings_without_architecture.items()])
 run_suffix = run_suffix.replace(".", "_")  # If any values are floats, replace "." with "_" for filename
 
 # Load MNIST dataset
@@ -163,14 +172,7 @@ features, labels = preprocess_mnist(features, labels)
 #         Dense(10),
 #         Softmax(),
 #     ]
-architecture = [
-    Dense(50),
-    BatchNorm(),
-    Relu(),
-    Dense(10),
-    BatchNorm(),
-    Softmax(),
-]
+architecture = RUN_SETTINGS["architecture"]
 
 # Define training task
 training_task = TrainingTask(
@@ -192,9 +194,7 @@ evaluation_task = EvaluationTask(
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
 )
 
-# Instantiate a model saver
-# TODO: replace attribute store of metrics within train/eval task with dicts, rather than lists. Then can access with
-#   names rather than indices
+# Instantiate a model saver task
 model_saver = ModelSaveTask(
     monitoring_task=evaluation_task,
     metric_type=CategoricalCrossentropyCost(),
