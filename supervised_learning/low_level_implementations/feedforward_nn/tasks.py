@@ -7,6 +7,7 @@ X ---> features
 Y ---> labels
 """
 import numpy as np
+import pickle
 from typing import Tuple, Union, List
 from tqdm.auto import tqdm
 
@@ -394,6 +395,10 @@ class Loop:
 
         # Save the last run's model
         self.model.save_checkpoint(f"{self.model_save_task.save_filepath}__last_run.pkl")
+
+        # Save loop as a pickle file
+        with open(f"{self.model_save_task.save_filepath}__loop.pkl", "wb") as f:
+            pickle.dump(self, f)
 
 
 
