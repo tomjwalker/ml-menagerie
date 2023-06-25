@@ -43,7 +43,10 @@ class Layer:
     """
 
     def __init__(self):
-        pass
+
+        # Flag which indicates whether layer has trainable parameters (weights, biases, BatchNorm params etc.)
+        # Helps for methods e.g. model save/load
+        self.trainable = False
 
     def __repr__(self):
         """
@@ -115,6 +118,8 @@ class Dense(Layer):
 
         # Feedforward connections in and out
         self.layer_input = None
+
+        self.trainable = True
 
         # TODO: don't recalculate this on every pass
         self.m_samples = None
@@ -255,6 +260,7 @@ class Relu(Layer):
     def __init__(self):
         super().__init__()
         self.layer_input = None
+        self.trainable = False
 
     def forward_pass(self, layer_preactivation, mode):
         """
@@ -310,6 +316,7 @@ class Softmax(Layer):
     def __init__(self):
         super().__init__()
         self.layer_output = None
+        self.trainable = False
 
     def forward_pass(self, preactivation, mode):
 
@@ -405,6 +412,8 @@ class BatchNorm(Layer):
 
         super().__init__()
 
+        self.trainable = True
+
         # Gamma and beta can't be initialised until the number of neurons in the layer is known, within the context
         # of the model. Therefore, initialise to None for now.
         self.gamma = None
@@ -424,9 +433,9 @@ class BatchNorm(Layer):
         # Momentum for running mean and variance
         self.momentum = momentum
 
-    def initialise_learnable_params(self, n_neurons):
+    def initialise_trainable_params(self, n_neurons):
         """
-        Initialise learnable parameters gamma and beta
+        Initialise trainable parameters gamma and beta
         """
 
         # Initialise gamma and beta
@@ -439,7 +448,7 @@ class BatchNorm(Layer):
 
         if self.gamma is None or self.beta is None:
             # Initialise gamma and beta
-            self.gamma, self.beta = self.initialise_learnable_params(input_activation_from_left.shape[0])
+            self.gamma, self.beta = self.initialise_trainable_params(input_activation_from_left.shape[0])
 
         # Update running mean and variance, if mode == "train". Otherwise use previously calculated values if mode ==
         # "infer"

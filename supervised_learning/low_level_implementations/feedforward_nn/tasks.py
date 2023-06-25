@@ -10,6 +10,8 @@ import numpy as np
 from typing import Tuple, Union, List
 from tqdm.auto import tqdm
 
+import os
+
 from supervised_learning.low_level_implementations.feedforward_nn.costs_and_metrics import \
     (BaseMetric, CategoricalCrossentropyCost, AccuracyMetric)
 from supervised_learning.low_level_implementations.feedforward_nn.models import SeriesModel
@@ -46,24 +48,6 @@ def batch_generator(features_train_or_val, labels_train_or_val, batch_size=32, s
         yield features_batch, labels_batch
 
 
-class SaveCheckpointDeterminer:
-    """
-    Function checks (at n_iters frequency) whether the current model is the best model so far. If so, it saves the
-    model to a checkpoint file.
-    """
-
-    metric_initialisation = {
-        "accuracy": {"init": 0.0, "how": "maximise"},
-        "categorical_crossentropy_cost": {"init": np.inf, "how": "minimise"}
-    }
-    def __init__(self, metric: BaseMetric, save_every_n_iters: int = 10):
-        self.save_every_n_iters = save_every_n_iters
-
-        self.best_so_far = self.metric_initialisation[metric.name]["init"]
-        self.optimisation_direction = self.metric_initialisation[metric.name]["how"]
-
-
-
 class TrainingTask:
     """
     A training task defines the training architecture.
@@ -98,7 +82,7 @@ class TrainingTask:
 
         self.optimiser = optimiser
         self.cost = cost
-        self.metrics = metrics
+        self.metrics = {metric.name: metric for metric in metrics}
 
         self.metric_log = {metric.name: [] for metric in metrics}
 
@@ -127,9 +111,74 @@ class EvaluationTask:
         self.mode = "infer"  # Passed into models - important for behaviour of certain layers which behave
         # differently in training and evaluation modes (e.g. batch norm)
 
-        self.metrics = metrics
+        self.metrics = {metric.name: metric for metric in metrics}
 
         self.metric_log = {metric.name: [] for metric in metrics}
+
+
+class ModelSaveTask:
+    """
+    Function checks (at n_iters frequency) whether the current model is the best model so far. If so, it saves the
+    model to a checkpoint file.
+    """
+
+    metric_initialisation = {
+        "accuracy": {"init": 0.0, "how": "maximise"},
+        "categorical_crossentropy_cost": {"init": np.inf, "how": "minimise"}
+    }
+
+    def __init__(
+            self,
+            monitoring_task: Union[TrainingTask, EvaluationTask],
+            metric_type: Union[CategoricalCrossentropyCost, AccuracyMetric] = CategoricalCrossentropyCost(),
+            save_every_n_iters: int = 10,
+            save_dir: str = "./model_save_checkpoint/",
+            save_filename: Union[str, None] = None,
+    ):
+        """
+        Initialises a model save task.
+        Args:
+            monitoring_task: This has been previously initialised and is used to retrieve the metric logs.
+            metric_type: This is used to retrieve the metric name.
+            save_every_n_iters: Sets the frequency at which the model is saved.
+            save_dir: Sets the directory in which the model is saved.
+            save_filename: Sets the filename for model saving.
+        """
+
+        # Store a filepath for saving the model
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        # Get the metric name from the provided metric type
+        self.metric_name = metric_type.name
+        self.save_filename = save_filename
+        if self.save_filename is None:
+            self.save_filename = f"{self.metric_name}_checkpoint"
+        self.save_filepath = os.path.join(save_dir, self.save_filename)
+
+        self.save_every_n_iters = save_every_n_iters
+
+        self.monitoring_task = monitoring_task
+        self.tracking_metric = monitoring_task.metrics[self.metric_name]
+
+        self.best_so_far_value = self.metric_initialisation[self.metric_name]["init"]
+        self.best_so_far_iteration = 0
+        self.optimisation_direction = self.metric_initialisation[self.metric_name]["how"]
+
+    def __call__(self, model: SeriesModel, n_iters: int):
+        if n_iters % self.save_every_n_iters == 0:
+            metric_value = self.monitoring_task.metric_log[self.metric_name][-1]
+            if self.optimisation_direction == "maximise":
+                if metric_value > self.best_so_far_value:
+                    self.best_so_far_value = metric_value
+                    self.best_so_far_iteration = n_iters
+                    model.save_checkpoint(self.save_filepath)
+            elif self.optimisation_direction == "minimise":
+                if metric_value < self.best_so_far_value:
+                    self.best_so_far_value = metric_value
+                    self.best_so_far_iteration = n_iters
+                    model.save_checkpoint(self.save_filepath)
+            else:
+                raise ValueError(f"Unknown optimisation direction: {self.optimisation_direction}")
 
 
 class Loop:
@@ -143,7 +192,7 @@ class Loop:
         - dataset: A tuple of (features, labels) of the training data.
         - model: The model to be trained.
         - training_task: The training task to be run.
-        - evaluation_task: The evaluation task to be run.
+        - monitoring_task: The evaluation task to be run.
 
     Methods:
         - run: Runs the training and evaluation tasks for a given number of epochs.
@@ -154,13 +203,15 @@ class Loop:
             dataset: Tuple[np.ndarray, np.ndarray],
             model: SeriesModel,
             training_task: TrainingTask,
-            evaluation_task: EvaluationTask = None,
+            evaluation_task: Union[None, EvaluationTask] = None,
+            model_save_task: Union[None, ModelSaveTask] = None,
             ):
 
         self.features, self.labels = dataset
         self.model = model
         self.training_task = training_task
         self.evaluation_task = evaluation_task
+        self.model_save_task = model_save_task
 
         # If log_grads is True, this list will store the weight gradient logs over training iterations
         self.grads_log = {}
@@ -180,6 +231,21 @@ class Loop:
             verbose: int = 1,    # 0: no progress bar, 1: simple print, 2: tqdm progress bar
             log_grads: bool = False,
     ):
+        """
+        Runs the training and evaluation tasks for a given number of epochs.
+
+        Args:
+            n_epochs: Number of epochs to run.
+            batch_size: Batch size to use.
+            train_fraction: Fraction of the dataset to use for training.
+            train_abs_samples: Number of training samples to use. If None, use all training samples.
+            verbose: Verbosity level.
+            log_grads: Whether to log the weight gradients or not.
+
+        Returns:
+            None. The training and evaluation tasks are run and the model is updated in place, and saved if a model
+            save task is specified.
+        """
 
         # Split dataset into training and validation sets
         features_train, features_val, labels_train, labels_val = train_val_split(self.features, self.labels,
@@ -243,7 +309,7 @@ class Loop:
 
                 # Update training task metrics
                 if self.training_task.metrics is not None:
-                    for metric in self.training_task.metrics:
+                    for metric_name, metric in self.training_task.metrics.items():
                         # Calculate metric
                         metric_train = metric(batch_Y, predictions)
                         # Append metric to metric log
@@ -262,7 +328,7 @@ class Loop:
 
                     # Update validation task metrics
                     if self.evaluation_task.metrics is not None:
-                        for metric in self.evaluation_task.metrics:
+                        for metric_name, metric in self.evaluation_task.metrics.items():
                             metric_val = metric(labels_val, predictions_val)
                             self.evaluation_task.metric_log[metric.name].append(metric_val)
                             metric_values[f"Evaluation {metric.name}"] = metric_val
@@ -287,6 +353,12 @@ class Loop:
                     # previous iterations were also updated
                     self.grads_log[iteration_num] = self.model.grads.copy()
 
+                # =====================
+                # Save model
+                # =====================
+                if self.model_save_task is not None:
+                    self.model_save_task(model=self.model, n_iters=iteration_num)
+
                 iteration_num += 1
 
             # =====================
@@ -308,4 +380,21 @@ class Loop:
 
             # Update progress bar metrics
             progress_bar.set_postfix(metric_values)
+
+        # Get the best run
+        best_run_value = self.model_save_task.best_so_far_value
+        best_run_iteration = self.model_save_task.best_so_far_iteration
+
+        # Print best run
+        print(f"Best saved run: {best_run_value:.4f} at iteration {best_run_iteration}")
+
+        # Save these numbers as a log within model_checkpoints
+        with open(f"{self.model_save_task.save_filepath}__best_run.txt", "w") as f:
+            f.write(f"{best_run_value:.4f} at iteration {best_run_iteration}")
+
+        # Save the last run's model
+        self.model.save_checkpoint(f"{self.model_save_task.save_filepath}__last_run.pkl")
+
+
+
 

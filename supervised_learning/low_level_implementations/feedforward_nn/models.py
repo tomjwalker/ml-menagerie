@@ -2,6 +2,7 @@
 This file contains the SeriesModel class which is a class that represents a neural network. It is a series of layers
 """
 from typing import Union
+import pickle
 
 import numpy as np
 
@@ -119,3 +120,27 @@ class SeriesModel:
             if isinstance(layer, BatchNorm):
                 layer.gamma = optimiser.update(layer.gamma, layer.grad_gamma)
                 layer.beta = optimiser.update(layer.beta, layer.grad_beta)
+
+    def save_checkpoint(self, path):
+
+        # If path does not end with .pkl, add it
+        if not path.endswith(".pkl"):
+            path += ".pkl"
+
+        # Save model
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+
+def load_checkpoint(path):
+
+    # Load model
+    with open(path, "rb") as f:
+        model = pickle.load(f)
+
+    return model
+
+
+
+
+
