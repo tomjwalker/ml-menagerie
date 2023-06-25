@@ -132,47 +132,54 @@ DATA_CACHE_DIR = "./data_cache"
 PLOTS_DIR = "./plots"
 MODEL_CHECKPOINTS_DIR = "./model_checkpoints"
 
-# RUN_SETTINGS = {
-#     "model_name": "mnist_ffnn_dense_50_batchnorm",
-#     "num_epochs": 10,  # 60
-#     "train_abs_samples": None,  # TODO: remove this after debugging (set to None) - then full training set is used
-#     "clip_grads_norm": True,
-# }
-
-RUN_SETTINGS = {
-    "model_name": "mnist_ffnn_dense_50_batchnorm",
-    "architecture": [
-        Dense(50),
-        BatchNorm(),
-        Relu(),
-        Dense(10),
-        BatchNorm(),
-        Softmax(),
-    ],
-    "num_epochs": 10,  # 60
-    "train_abs_samples": 200,  # TODO: remove this after debugging (set to None) - then full training set is used
-    "clip_grads_norm": True,
-}
-
-# Filepath prefix specifies the run settings as defined above
-run_settings_without_architecture = {key: value for key, value in RUN_SETTINGS.items() if key != "architecture"}
-run_suffix = "__".join([f"{key}_{str(value)}" for key, value in run_settings_without_architecture.items()])
-run_suffix = run_suffix.replace(".", "_")  # If any values are floats, replace "." with "_" for filename
+# This list specifies a sweep of different models/runs. Each element of the list is a dictionary, which specifies the
+# run config.
+RUN_SETTINGS = [
+    {
+        "model_name": "mnist_ffnn_dense_50",
+        "architecture": [
+            Dense(50),
+            Relu(),
+            Dense(10),
+            Softmax(),
+        ],
+        "num_epochs": 3,
+        "train_abs_samples": 200,
+        "clip_grads_norm": False,
+    },
+    {
+        "model_name": "mnist_ffnn_dense_50",
+        "architecture": [
+            Dense(50),
+            Relu(),
+            Dense(10),
+            Softmax(),
+        ],
+        "num_epochs": 3,
+        "train_abs_samples": 200,
+        "clip_grads_norm": True,
+    },
+    # {
+    #     "model_name": "mnist_ffnn_dense_50_batchnorm",
+    #     "architecture": [
+    #         Dense(50),
+    #         BatchNorm(),
+    #         Relu(),
+    #         Dense(10),
+    #         BatchNorm(),
+    #         Softmax(),
+    #     ],
+    #     "num_epochs": 50,
+    #     "train_abs_samples": 200,
+    #     "clip_grads_norm": True,
+    # },
+]
 
 # Load MNIST dataset
 features, labels = load_mnist()
 
 # Preprocess MNIST dataset
 features, labels = preprocess_mnist(features, labels)
-
-# Define network architecture as a series of layers
-# architecture = [
-#         Dense(50),
-#         Relu(),
-#         Dense(10),
-#         Softmax(),
-#     ]
-architecture = RUN_SETTINGS["architecture"]
 
 # Define training task
 training_task = TrainingTask(
@@ -182,64 +189,67 @@ training_task = TrainingTask(
     clip_grads_norm=True,
 )
 
-# Initialise model
-# TODO: want to separate out coupling between model and training task? Where best to instantiate clip_grads_norm?
-model = SeriesModel(
-    layers=architecture,
-    clip_grads_norm=training_task.clip_grads_norm,
-)
-
 # Define evaluation task
 evaluation_task = EvaluationTask(
     metrics=[CategoricalCrossentropyCost(), AccuracyMetric()],
 )
 
-# Instantiate a model saver task
-model_saver = ModelSaveTask(
-    monitoring_task=evaluation_task,
-    metric_type=CategoricalCrossentropyCost(),
-    save_every_n_iters=10,
-    save_dir=MODEL_CHECKPOINTS_DIR,
-    save_filename=run_suffix,
-)
 
-# Run training loop
-loop = Loop(
-    dataset=(features, labels),
-    model=model,
-    training_task=training_task,
-    evaluation_task=evaluation_task,
-    model_save_task=model_saver,
-)
+# Sweep over all runs specified in RUN_SETTINGS
+for run_config in RUN_SETTINGS:
 
-loop.run(
-    n_epochs=RUN_SETTINGS["num_epochs"],
-    batch_size=32,
-    train_abs_samples=RUN_SETTINGS["train_abs_samples"],
-    verbose=1,
-    log_grads=True,
-)
+    # Filepath prefix specifies the run settings as defined above
+    run_config_without_architecture = {key: value for key, value in run_config.items() if key != "architecture"}
+    run_suffix = "__".join([f"{key}_{str(value)}" for key, value in run_config_without_architecture.items()])
+    run_suffix = run_suffix.replace(".", "_")  # If any values are floats, replace "." with "_" for filename
 
-# Plot training and evaluation metric logs
-for metric in loop.training_task.metric_log.keys():
-    save_metric_logs(
-        loop.training_task.metric_log,
-        loop.evaluation_task.metric_log,
-        metric,
-        metric_log_dir=DATA_CACHE_DIR,
-        run_config_suffix=run_suffix
+    # Instantiate a model saver task
+    model_saver = ModelSaveTask(
+        monitoring_task=evaluation_task,
+        metric_type=CategoricalCrossentropyCost(),
+        save_every_n_iters=10,
+        save_dir=MODEL_CHECKPOINTS_DIR,
+        save_filename=run_suffix,
     )
 
-    plot_metric_logs_vs_gradient_norms(
-        loop.training_task.metric_log,
-        loop.evaluation_task.metric_log,
-        metric,
-        loop,
-        plot_dir=PLOTS_DIR,
-        run_config_suffix=run_suffix,
+    # Initialise model
+    architecture = run_config["architecture"]
+    # TODO: want to separate out coupling between model and training task? Where best to instantiate clip_grads_norm?
+    model = SeriesModel(
+        layers=architecture,
+        clip_grads_norm=training_task.clip_grads_norm,
     )
 
-# Look at some predictions on the evaluation set
-predictions = loop.model.forward_pass(loop.features_val, mode="infer")
-save_filepath = f"{PLOTS_DIR}/sampled_predictions__{run_suffix}.png"
-show_digit_samples(loop.features_val, loop.labels_val, predictions, m_samples=10, save_filepath=save_filepath)
+    # Run training loop
+    loop = Loop(
+        dataset=(features, labels),
+        model=model,
+        training_task=training_task,
+        evaluation_task=evaluation_task,
+        model_save_task=model_saver,
+    )
+
+    loop.run(
+        n_epochs=run_config["num_epochs"],
+        batch_size=32,
+        train_abs_samples=run_config["train_abs_samples"],
+        verbose=1,
+        log_grads=True,
+    )
+
+    # Plot training and evaluation metric logs
+    for metric in loop.training_task.metric_log.keys():
+
+        plot_metric_logs_vs_gradient_norms(
+            loop.training_task.metric_log,
+            loop.evaluation_task.metric_log,
+            metric,
+            loop,
+            plot_dir=PLOTS_DIR,
+            run_config_suffix=run_suffix,
+        )
+
+# # Look at some predictions on the evaluation set
+# predictions = loop.model.forward_pass(loop.features_val, mode="infer")
+# save_filepath = f"{PLOTS_DIR}/sampled_predictions__{run_suffix}.png"
+# show_digit_samples(loop.features_val, loop.labels_val, predictions, m_samples=10, save_filepath=save_filepath)
