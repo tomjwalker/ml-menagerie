@@ -38,15 +38,16 @@ class Agent:
         Select an action using an exploration-exploitation strategy (here: epsilon greedy)
         """
 
-        possible_actions = self.q_table[state, :]
-        best_action = possible_actions.max()
+        possible_action_returns = self.q_table[state, :]
+        # `flatnonzero` in combination with the inner `max` is used to handle multiple actions with the same value
+        best_actions = np.flatnonzero(possible_action_returns == possible_action_returns.max())
 
         if np.random.rand() < self.epsilon:
             # Explore
-            action = np.random.choice(possible_actions)
+            action = np.random.choice([*range(self.num_actions)])
         else:
-            # Exploit
-            action = best_action
+            # Exploit. If there are multiple actions with the same value (ties), choose one at random
+            action = np.random.choice(best_actions)
 
         return action
 
