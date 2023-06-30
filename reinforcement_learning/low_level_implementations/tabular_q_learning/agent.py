@@ -31,7 +31,7 @@ class Agent:
         self.epsilon = epsilon    # exploration rate
 
         # Initialise Q table to zeros
-        self.q_table = np.zeros((self.num_states, self.num_actions), dtype=int)
+        self.q_table = np.zeros((self.num_states, self.num_actions), dtype=float)
 
     def choose_action(self, state):
         """

@@ -54,8 +54,14 @@ for episode in range(NUM_EPISODES):
         # Environment transition
         new_state, reward, terminated, truncated, info = env.step(action)
 
+        if reward == 1:
+            print("here we go...!")
+
         # Agent learning
         agent.update_q_table(state, action, new_state, reward)
+
+        if reward == 1:
+            print(agent.q_table.sum())
 
         # Update state
         state = new_state
