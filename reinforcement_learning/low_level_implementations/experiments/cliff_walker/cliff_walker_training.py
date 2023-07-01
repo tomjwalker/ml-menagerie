@@ -16,7 +16,7 @@ from reinforcement_learning.low_level_implementations.tabular_q_learning.agent i
 # Training configuration parameters
 config = {
     # Environment parameters
-    "NUM_EPISODES": 5000,
+    "NUM_EPISODES": 10000,
     "MAX_STEPS_PER_EPISODE": 100,
     "RENDER_MODE": "none",   # "human", "none"
     "IS_SLIPPERY": True,
