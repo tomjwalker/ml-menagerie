@@ -90,7 +90,7 @@ def plot_training_metrics_per_step(training_metrics, window_size=100, metric_nam
     if metric_name is None:
         title = "Training Metric per Episode"
     else:
-        title = "Training Metrics per Episode"
+        title = f"{metric_name}"
     plt.title(title)
     plt.xlabel("Episode")
     plt.ylabel("Metric Value")

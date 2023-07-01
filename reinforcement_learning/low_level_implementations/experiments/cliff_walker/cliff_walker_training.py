@@ -3,6 +3,7 @@ import numpy as np
 import warnings    # There's an annoying warning in matplotlib to suppress
 from enum import Enum
 import os
+import json
 
 from utils import plot_q_table, plot_training_metrics_per_step
 from reinforcement_learning.low_level_implementations.tabular_q_learning.agent import Agent
@@ -12,23 +13,24 @@ from reinforcement_learning.low_level_implementations.tabular_q_learning.agent i
 # Run parameters
 ########################################################################################################################
 
-# Environment parameters
-NUM_EPISODES = 5000
-MAX_STEPS_PER_EPISODE = 100
-RENDER_MODE = "none"    # "human" to render the environment/episode. "none" to turn off rendering
-# Slippery version of environment has stochastic transitions: based on action, agent may move in a direction other
-# than the one intended (with probability 1/3 for all directions except 180 degrees opposite action selection)
-IS_SLIPPERY = True
-save_freq = NUM_EPISODES // 10
+# Training configuration parameters
+config = {
+    # Environment parameters
+    "NUM_EPISODES": 10000,
+    "MAX_STEPS_PER_EPISODE": 100,
+    "RENDER_MODE": "none",   # "human", "none"
+    "IS_SLIPPERY": True,
+    # Agent parameters
+    "AGENT_NAME": "tabular_q_learning__vanilla_epsilon_greedy",
+    "LEARNING_RATE": 0.1,
+    "DISCOUNT_FACTOR": 0.9,
+    "EXPLORATION_RATE": 0.1,
+}
 
-# Agent parameters
-AGENT_NAME = "tabular_q_learning__vanilla_epsilon_greedy"
-LEARNING_RATE = 0.1
-DISCOUNT_FACTOR = 0.9
-EXPLORATION_RATE = 0.1
+save_freq = config["NUM_EPISODES"] // 10
 
-run_name = f"{AGENT_NAME}__lr_{LEARNING_RATE}__df_{DISCOUNT_FACTOR}__er_{EXPLORATION_RATE}__episodes_{NUM_EPISODES}" \
-           f"__is_slippery_{IS_SLIPPERY}"
+run_name = f"{config['AGENT_NAME']}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
+           f"er_{config['EXPLORATION_RATE']}__episodes_{config['NUM_EPISODES']}__is_slippery_{config['IS_SLIPPERY']}"
 
 
 # Training artefact directories
@@ -43,17 +45,21 @@ for directory in RunDirectories:
     if not os.path.exists(directory.value):
         os.makedirs(directory.value)
 
+# Save run configuration
+with open(f"./.cache/{run_name}/config.json", "w") as f:
+    json.dump(config, f, indent=4)
+
 
 ########################################################################################################################
 # Training loop
 ########################################################################################################################
 
 # Instantiate the environment and agent
-env = gym.make('FrozenLake-v1', render_mode=RENDER_MODE, is_slippery=IS_SLIPPERY)
+env = gym.make('FrozenLake-v1', render_mode=config['RENDER_MODE'], is_slippery=config['IS_SLIPPERY'])
 agent = Agent(
-    gamma=DISCOUNT_FACTOR,
-    alpha=LEARNING_RATE,
-    epsilon=EXPLORATION_RATE,
+    gamma=config['DISCOUNT_FACTOR'],
+    alpha=config['LEARNING_RATE'],
+    epsilon=config['EXPLORATION_RATE'],
     num_states=env.observation_space.n,
     num_actions=env.action_space.n
 )
@@ -62,7 +68,7 @@ agent = Agent(
 episode_total_reward = []
 episode_length = []
 episode_discounted_return_per_step = []
-for episode in range(NUM_EPISODES):
+for episode in range(config['NUM_EPISODES']):
 
     # Reset the environment
     state, info = env.reset()
@@ -88,7 +94,7 @@ for episode in range(NUM_EPISODES):
         # Record the reward
         episode_rewards.append(reward)
 
-        if RENDER_MODE == "human":
+        if config['RENDER_MODE'] == "human":
             env.render()
 
     # Record performance metrics
@@ -99,7 +105,7 @@ for episode in range(NUM_EPISODES):
     )
 
     if episode % save_freq == 0:
-        print(f"Episode {episode} of {NUM_EPISODES} completed")
+        print(f"Episode {episode} of {config['NUM_EPISODES']} completed")
         # Save the Q-table to a file
         agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/q_table_episode_{episode}.npy")
 
