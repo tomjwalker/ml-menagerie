@@ -1,6 +1,9 @@
 import numpy as np
 import os
 
+from low_level_implementations.tabular_q_learning.utils import (EpsilonGreedySelector, SoftmaxSelector)
+
+
 
 class Agent:
     """
@@ -11,7 +14,7 @@ class Agent:
     - num_actions: int, size of action space - sets a dimension of the Q table
     - gamma: float, discount factor
     - alpha: float, learning rate
-    - epsilon: float, exploration rate
+    - action_selector: object, selects actions based on the Q-table
     - q_table: np.ndarray of shape (num_states, num_actions), initialised to zeros
 
     Methods
@@ -22,31 +25,24 @@ class Agent:
     - load_q_table: load the Q-table from a file
     """
 
-    def __init__(self, num_states, num_actions, gamma=0.9, alpha=0.1, epsilon=0.1):
+    def __init__(self, num_states, num_actions, action_selector, gamma=0.9, alpha=0.1):
         self.num_states = num_states    # size of state space - sets a dimension of the Q table
         self.num_actions = num_actions    # size of action space - sets a dimension of the Q table
         self.gamma = gamma    # discount factor
         self.alpha = alpha    # learning rate
-        self.epsilon = epsilon    # exploration rate
+        self.action_selector = action_selector
 
         # Initialise Q table to zeros
         self.q_table = np.zeros((self.num_states, self.num_actions), dtype=float)
 
-    def choose_action(self, state):
+    def choose_action(self, state, episode):
         """
-        Select an action using an exploration-exploitation strategy (here: epsilon greedy)
+        Select an action using an exploration-exploitation strategy
         """
 
-        possible_action_returns = self.q_table[state, :]
-        # `flatnonzero` in combination with the inner `max` is used to handle multiple actions with the same value
-        best_actions = np.flatnonzero(possible_action_returns == possible_action_returns.max())
+        possible_action_values = self.q_table[state, :]
 
-        if np.random.rand() < self.epsilon:
-            # Explore
-            action = np.random.choice([*range(self.num_actions)])
-        else:
-            # Exploit. If there are multiple actions with the same value (ties), choose one at random
-            action = np.random.choice(best_actions)
+        action = self.action_selector(possible_action_values, episode)
 
         return action
 
