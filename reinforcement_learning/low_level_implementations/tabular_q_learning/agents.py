@@ -1,7 +1,8 @@
 import numpy as np
 import os
 
-from low_level_implementations.tabular_q_learning.utils import EpsilonGreedySelector
+from low_level_implementations.tabular_q_learning.utils import (EpsilonGreedySelector, SoftmaxSelector)
+
 
 
 class Agent:
@@ -24,7 +25,7 @@ class Agent:
     - load_q_table: load the Q-table from a file
     """
 
-    def __init__(self, num_states, num_actions, gamma=0.9, alpha=0.1, action_selector=EpsilonGreedySelector()):
+    def __init__(self, num_states, num_actions, action_selector, gamma=0.9, alpha=0.1):
         self.num_states = num_states    # size of state space - sets a dimension of the Q table
         self.num_actions = num_actions    # size of action space - sets a dimension of the Q table
         self.gamma = gamma    # discount factor

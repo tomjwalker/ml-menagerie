@@ -10,10 +10,38 @@ from reinforcement_learning.low_level_implementations.tabular_q_learning.agents 
 from reinforcement_learning.low_level_implementations.tabular_q_learning.utils import EpsilonGreedySelector
 
 # =============================================================================
-# Settings
+# Evaluation settings
 # =============================================================================
 
-EVAL_NAME = "slippery_vs_non_slippery"
+EVAL_NAME = "e_greedy_vs_softmax"
+
+# Specify runs to inspect
+RUN_DIRECTORIES = {
+    # LR sweep, slippery=False
+    "learning_rate_0.1": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
+                         "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_False",
+    # # LR sweep, slippery=True
+    # "learning_rate_0.1_slippery": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
+    #                               "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_True",
+    # # LR sweep, slippery=True, softmax action selector
+    # "learning_rate_0.1_slippery_softmax_selection":
+    #     ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__as_SoftmaxSelector("
+    #     "temperature=1)__episodes_10000__is_slippery_True",
+    # # LR sweep, slippery=False, softmax action selector
+    # "learning_rate_0.1_softmax_selection":
+    #     ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__as_SoftmaxSelector("
+    #     "temperature=1)__episodes_10000__is_slippery_False",
+    # LR sweep, slippery=False, softmax action selector
+    "learning_rate_0.25_softmax_selection":
+        ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__as_SoftmaxSelector("
+        "temperature=0.1)__episodes_10000__is_slippery_False",
+}
+
+METRICS = [
+    "episode_discounted_return_per_step",
+    "episode_length",
+    "episode_total_reward",
+]
 
 
 class EvalDirectories(Enum):
@@ -26,29 +54,10 @@ for directory in EvalDirectories:
         os.makedirs(directory.value)
 
 
-# =============================================================================
-# Specify runs to inspect
-# =============================================================================
-
-RUN_DIRECTORIES = {
-    # LR sweep, slippery=False
-    "learning_rate_0.1": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
-                         "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_False",
-    # LR sweep, slippery=True
-    "learning_rate_0.1_slippery": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
-                                  "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_True",
-
-}
 
 # =============================================================================
 # Plot metrics
 # =============================================================================
-
-METRICS = [
-    "episode_discounted_return_per_step",
-    "episode_length",
-    "episode_total_reward",
-]
 
 for metric in METRICS:
 
@@ -96,8 +105,8 @@ for run_name, config in configs.items():
         agent = Agent(
             num_states=env.observation_space.n,
             num_actions=env.action_space.n,
-            gamma=config['DISCOUNT_FACTOR'],
             action_selector=config['ACTION_SELECTOR'],
+            gamma=config['DISCOUNT_FACTOR'],
             alpha=config['LEARNING_RATE'],
         )
 

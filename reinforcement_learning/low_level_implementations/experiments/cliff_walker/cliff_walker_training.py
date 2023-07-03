@@ -7,7 +7,8 @@ import pickle
 
 from utils import plot_q_table, plot_training_metrics_per_step
 from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
-from reinforcement_learning.low_level_implementations.tabular_q_learning.utils import EpsilonGreedySelector
+from reinforcement_learning.low_level_implementations.tabular_q_learning.utils import (EpsilonGreedySelector,
+                                                                                       SoftmaxSelector)
 
 
 ########################################################################################################################
@@ -20,13 +21,13 @@ config = {
     "NUM_EPISODES": 10000,
     "MAX_STEPS_PER_EPISODE": 100,
     "RENDER_MODE": "none",   # "human", "none"
-    "IS_SLIPPERY": True,
+    "IS_SLIPPERY": False,
     "NUM_CHECKPOINTS": 10,
     # Agent parameters
     "AGENT_NAME": "tabular_q_learning__vanilla_epsilon_greedy",
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
-    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1),
+    "ACTION_SELECTOR": SoftmaxSelector(temperature=0.25),
 }
 
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
@@ -61,7 +62,7 @@ env = gym.make('FrozenLake-v1', render_mode=config['RENDER_MODE'], is_slippery=c
 agent = Agent(
     gamma=config['DISCOUNT_FACTOR'],
     alpha=config['LEARNING_RATE'],
-
+    action_selector=config['ACTION_SELECTOR'],
     num_states=env.observation_space.n,
     num_actions=env.action_space.n
 )
