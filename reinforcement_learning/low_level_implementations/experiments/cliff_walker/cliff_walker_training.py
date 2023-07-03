@@ -27,7 +27,7 @@ config = {
     "AGENT_NAME": "tabular_q_learning__vanilla_epsilon_greedy",
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
-    "ACTION_SELECTOR": SoftmaxSelector(temperature=0.25),
+    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear", num_episodes_window=500),
 }
 
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
@@ -83,7 +83,7 @@ for episode in range(config['NUM_EPISODES']):
     while not (terminated or truncated):
 
         # Agent action decision
-        action = agent.choose_action(state)
+        action = agent.choose_action(state, episode)
 
         # Environment transition
         new_state, reward, terminated, truncated, info = env.step(action)

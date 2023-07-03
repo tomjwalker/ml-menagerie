@@ -35,14 +35,14 @@ class Agent:
         # Initialise Q table to zeros
         self.q_table = np.zeros((self.num_states, self.num_actions), dtype=float)
 
-    def choose_action(self, state):
+    def choose_action(self, state, episode):
         """
         Select an action using an exploration-exploitation strategy
         """
 
         possible_action_values = self.q_table[state, :]
 
-        action = self.action_selector(possible_action_values)
+        action = self.action_selector(possible_action_values, episode)
 
         return action
 
