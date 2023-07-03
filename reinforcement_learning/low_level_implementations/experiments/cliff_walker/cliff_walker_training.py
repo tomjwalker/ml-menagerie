@@ -19,7 +19,8 @@ config = {
     "NUM_EPISODES": 10000,
     "MAX_STEPS_PER_EPISODE": 100,
     "RENDER_MODE": "none",   # "human", "none"
-    "IS_SLIPPERY": True,
+    "IS_SLIPPERY": False,
+    "NUM_CHECKPOINTS": 10,
     # Agent parameters
     "AGENT_NAME": "tabular_q_learning__vanilla_epsilon_greedy",
     "LEARNING_RATE": 0.1,
@@ -27,7 +28,7 @@ config = {
     "EXPLORATION_RATE": 0.1,
 }
 
-save_freq = config["NUM_EPISODES"] // 10
+save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
 
 run_name = f"{config['AGENT_NAME']}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
            f"er_{config['EXPLORATION_RATE']}__episodes_{config['NUM_EPISODES']}__is_slippery_{config['IS_SLIPPERY']}"
@@ -73,7 +74,7 @@ for episode in range(config['NUM_EPISODES']):
     # Reset the environment
     state, info = env.reset()
 
-    # Run the episode to completion, or until the maximum number of steps is reached
+    # Run the training_episode to completion, or until the maximum number of steps is reached
     terminated = False
     truncated = False
     episode_rewards = []
@@ -113,6 +114,12 @@ for episode in range(config['NUM_EPISODES']):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             plot_q_table(agent.q_table, episode_num=episode, save_dir=RunDirectories.Q_TABLE_PLOTS.value)
+
+# Save final checkpoint
+agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/q_table_episode_{config['NUM_EPISODES']}.npy")
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    plot_q_table(agent.q_table, episode_num=config['NUM_EPISODES'], save_dir=RunDirectories.Q_TABLE_PLOTS.value)
 
 # Save and plot performance metrics
 np.save(f"{RunDirectories.METRIC_DATA.value}/episode_total_reward.npy", episode_total_reward)
