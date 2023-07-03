@@ -1,1 +1,1 @@
-from .tabular_q_learning.agent import Agent
+from .tabular_q_learning.agents import Agent

@@ -3,10 +3,11 @@ import numpy as np
 import warnings    # There's an annoying warning in matplotlib to suppress
 from enum import Enum
 import os
-import json
+import pickle
 
 from utils import plot_q_table, plot_training_metrics_per_step
-from reinforcement_learning.low_level_implementations.tabular_q_learning.agent import Agent
+from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
+from reinforcement_learning.low_level_implementations.tabular_q_learning.utils import EpsilonGreedySelector
 
 
 ########################################################################################################################
@@ -19,19 +20,19 @@ config = {
     "NUM_EPISODES": 10000,
     "MAX_STEPS_PER_EPISODE": 100,
     "RENDER_MODE": "none",   # "human", "none"
-    "IS_SLIPPERY": False,
+    "IS_SLIPPERY": True,
     "NUM_CHECKPOINTS": 10,
     # Agent parameters
     "AGENT_NAME": "tabular_q_learning__vanilla_epsilon_greedy",
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
-    "EXPLORATION_RATE": 0.1,
+    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1),
 }
 
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
 
 run_name = f"{config['AGENT_NAME']}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
-           f"er_{config['EXPLORATION_RATE']}__episodes_{config['NUM_EPISODES']}__is_slippery_{config['IS_SLIPPERY']}"
+           f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_{config['IS_SLIPPERY']}"
 
 
 # Training artefact directories
@@ -46,9 +47,9 @@ for directory in RunDirectories:
     if not os.path.exists(directory.value):
         os.makedirs(directory.value)
 
-# Save run configuration
-with open(f"./.cache/{run_name}/config.json", "w") as f:
-    json.dump(config, f, indent=4)
+# Save run configuration dictionary as pickle file
+with open(f"./.cache/{run_name}/config.pkl", "wb") as f:
+    pickle.dump(config, f)
 
 
 ########################################################################################################################
@@ -60,7 +61,7 @@ env = gym.make('FrozenLake-v1', render_mode=config['RENDER_MODE'], is_slippery=c
 agent = Agent(
     gamma=config['DISCOUNT_FACTOR'],
     alpha=config['LEARNING_RATE'],
-    epsilon=config['EXPLORATION_RATE'],
+
     num_states=env.observation_space.n,
     num_actions=env.action_space.n
 )

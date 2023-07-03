@@ -1,13 +1,13 @@
 from utils import plot_training_metrics_per_step
 import numpy as np
-import json
+import pickle
 from enum import Enum
 import os
 import gymnasium as gym
-from gymnasium.wrappers import RecordVideo
 from gymnasium.utils.save_video import save_video
 
-from reinforcement_learning.low_level_implementations.tabular_q_learning.agent import Agent
+from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
+from reinforcement_learning.low_level_implementations.tabular_q_learning.utils import EpsilonGreedySelector
 
 # =============================================================================
 # Settings
@@ -32,11 +32,11 @@ for directory in EvalDirectories:
 
 RUN_DIRECTORIES = {
     # LR sweep, slippery=False
-    "learning_rate_0.1": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__er_0.1__"
-                         "episodes_10000__is_slippery_False",
+    "learning_rate_0.1": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
+                         "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_False",
     # LR sweep, slippery=True
-    "learning_rate_0.1_slippery": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__er_0.1__"
-                                  "episodes_10000__is_slippery_True",
+    "learning_rate_0.1_slippery": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
+                                  "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_True",
 
 }
 
@@ -44,28 +44,40 @@ RUN_DIRECTORIES = {
 # Plot metrics
 # =============================================================================
 
-# Discounted return per training_episode
-discounted_return_per_episode = {
-    run_name: np.load(f"{run_directory}/data/metrics/episode_discounted_return_per_step.npy") for
-    run_name, run_directory in RUN_DIRECTORIES.items()
-}
+METRICS = [
+    "episode_discounted_return_per_step",
+    "episode_length",
+    "episode_total_reward",
+]
 
-plot_training_metrics_per_step(
-    training_metrics=discounted_return_per_episode,
-    metric_name="discounted_return_per_step",
-    save_dir=None,    # Show rather than save
-)
+for metric in METRICS:
+
+    # Load metrics
+    metrics = {
+        run_name: np.load(f"{run_directory}/data/metrics/{metric}.npy") for
+        run_name, run_directory in RUN_DIRECTORIES.items()
+    }
+
+    # Plot
+    plot_training_metrics_per_step(
+        training_metrics=metrics,
+        metric_name=metric,
+        save_dir=EvalDirectories.PLOTS.value,
+    )
+
 
 # =============================================================================
 # Load agent and render activity at stages of training loop
 # =============================================================================
 
-# Load config JSONs
-configs = {
-    run_name: json.load(open(f"{run_directory}/config.json", "r")) for
-    run_name, run_directory in RUN_DIRECTORIES.items()
-}
+# Load pickled configs
+configs = {}
+for run_name, run_directory in RUN_DIRECTORIES.items():
+    with open(f"{run_directory}/config.pkl", "rb") as f:
+        configs[run_name] = pickle.load(f)
 
+
+# For each config, get multi-episode videos of behaviour at the start, middle, and end of training
 for run_name, config in configs.items():
 
     # Get mid-training Q-table
@@ -85,7 +97,7 @@ for run_name, config in configs.items():
             num_states=env.observation_space.n,
             num_actions=env.action_space.n,
             gamma=config['DISCOUNT_FACTOR'],
-            epsilon=config['EXPLORATION_RATE'],
+            action_selector=config['ACTION_SELECTOR'],
             alpha=config['LEARNING_RATE'],
         )
 
