@@ -123,11 +123,6 @@ for trial in range(config['NUM_TRIALS']):
                 env.render()
 
         # Record performance metrics
-        # episode_total_reward.append(sum(episode_rewards))
-        # episode_length.append(len(episode_rewards))
-        # episode_discounted_return_per_step.append(
-        #     sum([agent.gamma ** i * episode_rewards[i] for i in range(len(episode_rewards))]) / len(episode_rewards)
-        # )
         [metric.update(episode_rewards, agent, episode=episode, trial=trial) for metric in METRICS]
 
         if episode % save_freq == 0:
@@ -139,14 +134,6 @@ for trial in range(config['NUM_TRIALS']):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 plot_q_table(agent.q_table, episode_num=episode, save_dir=RunDirectories.Q_TABLE_PLOTS.value)
-    #
-    # # Record performance metrics
-    # experiment_metrics["episode_total_reward"][trial, :] = episode_total_reward
-    # experiment_metrics["episode_length"][trial, :] = episode_length
-    # experiment_metrics["episode_discounted_return_per_step"][trial, :] = episode_discounted_return_per_step
-
-    # Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
-    [metric.finalise() for metric in METRICS]
 
     # Save final checkpoint
     agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/trial_{trial}/q_table_episode"
@@ -156,15 +143,11 @@ for trial in range(config['NUM_TRIALS']):
         plot_q_table(agent.q_table, episode_num=config['NUM_EPISODES'], save_dir=RunDirectories.Q_TABLE_PLOTS.value)
 
 
-# Save and plot performance metrics
-# np.save(f"{RunDirectories.METRIC_DATA.value}/episode_total_reward.npy", experiment_metrics["episode_total_reward"])
-# np.save(f"{RunDirectories.METRIC_DATA.value}/episode_length.npy", experiment_metrics["episode_length"])
-# np.save(
-#     f"{RunDirectories.METRIC_DATA.value}/episode_discounted_return_per_step.npy",
-#     experiment_metrics["episode_discounted_return_per_step"]
-# )
-[metric.save(save_dir=RunDirectories.METRIC_DATA.value) for metric in METRICS]
+# Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
+[metric.finalise() for metric in METRICS]
 
+# Save and plot performance metrics
+[metric.save(save_dir=RunDirectories.METRIC_DATA.value) for metric in METRICS]
 for metric in METRICS:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -174,23 +157,3 @@ for metric in METRICS:
             save_dir=RunDirectories.METRIC_PLOTS.value,
             show_individual_trials=True
         )
-# with warnings.catch_warnings():
-#     warnings.simplefilter("ignore")
-#     plot_training_metrics_multiple_trials(
-#         {run_name: experiment_metrics["episode_total_reward"]},
-#         metric_name="Total Reward",
-#         save_dir=RunDirectories.METRIC_PLOTS.value,
-#         show_individual_trials=True
-#     )
-#     plot_training_metrics_multiple_trials(
-#         {run_name: experiment_metrics["episode_length"]},
-#         metric_name="Episode Length",
-#         save_dir=RunDirectories.METRIC_PLOTS.value,
-#         show_individual_trials=True
-#     )
-#     plot_training_metrics_multiple_trials(
-#         {run_name: experiment_metrics["episode_discounted_return_per_step"]},
-#         metric_name="Discounted Return",
-#         save_dir=RunDirectories.METRIC_PLOTS.value,
-#         show_individual_trials=True
-#     )
