@@ -184,22 +184,22 @@ def plot_training_metrics_multiple_trials(
             for trial in metric:
                 plt.plot(trial, alpha=0.05, color=color)
 
-        # Set the plot title and labels
-        if metric_name is None:
-            title = "Training Metric per Episode"
-        else:
-            title = f"{metric_name}"
-        plt.title(title)
-        plt.xlabel("Episode")
-        plt.ylabel("Metric Value")
+    # Set the plot title and labels
+    if metric_name is None:
+        title = "Training Metric per Episode"
+    else:
+        title = f"{metric_name}"
+    plt.title(title)
+    plt.xlabel("Episode")
+    plt.ylabel("Metric Value")
 
-        # Show the legend
-        plt.legend()
+    # Show the legend
+    plt.legend()
 
-        # Save the plot
-        if save_dir is not None:
-            plt.savefig(os.path.join(save_dir, f"{metric_name}_per_episode.png"))
-            plt.close()
-        else:
-            plt.show()
+    # Save the plot
+    if save_dir is not None:
+        plt.savefig(os.path.join(save_dir, f"{metric_name}_per_episode.png"))
+        plt.close()
+    else:
+        plt.show()
 

@@ -5,15 +5,16 @@ from enum import Enum
 import os
 import pickle
 
-from utils import plot_q_table, plot_training_metrics_single_trial, plot_training_metrics_multiple_trials
+from plotting import plot_q_table, plot_training_metrics_single_trial, plot_training_metrics_multiple_trials
 from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
 from reinforcement_learning.low_level_implementations.tabular_q_learning.action_selection import (EpsilonGreedySelector,
                                                                                                   SoftmaxSelector)
-
+from metrics import (EpisodeReward, EpisodeLength, DiscountedReturn, CumulativeReward, CumulativeDiscountedReturn)
 
 ########################################################################################################################
 # Run parameters
 ########################################################################################################################
+
 
 # Training configuration parameters
 config = {
@@ -28,11 +29,9 @@ config = {
     "AGENT_NAME": "tabular_q_learning",
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
-    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear", num_episodes_window=500),
+    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="exponential"),
 }
-
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
-
 run_name = f"{config['AGENT_NAME']}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
            f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_{config['IS_SLIPPERY']}"
 
@@ -45,6 +44,7 @@ class RunDirectories(Enum):
     METRIC_PLOTS = f"./.cache/{run_name}/plots/metrics"
 
 
+# Create directories if they don't exist
 for directory in RunDirectories:
     if not os.path.exists(directory.value):
         os.makedirs(directory.value)
@@ -53,6 +53,14 @@ for directory in RunDirectories:
 with open(f"./.cache/{run_name}/config.pkl", "wb") as f:
     pickle.dump(config, f)
 
+
+METRICS = [
+    EpisodeReward(num_episodes=config['NUM_EPISODES'], num_trials=config['NUM_TRIALS']),
+    EpisodeLength(num_episodes=config['NUM_EPISODES'], num_trials=config['NUM_TRIALS']),
+    DiscountedReturn(num_episodes=config['NUM_EPISODES'], num_trials=config['NUM_TRIALS']),
+    CumulativeReward(num_episodes=config['NUM_EPISODES'], num_trials=config['NUM_TRIALS']),
+    CumulativeDiscountedReturn(num_episodes=config['NUM_EPISODES'], num_trials=config['NUM_TRIALS']),
+]
 
 ########################################################################################################################
 # Training loop
@@ -115,26 +123,30 @@ for trial in range(config['NUM_TRIALS']):
                 env.render()
 
         # Record performance metrics
-        episode_total_reward.append(sum(episode_rewards))
-        episode_length.append(len(episode_rewards))
-        episode_discounted_return_per_step.append(
-            sum([agent.gamma ** i * episode_rewards[i] for i in range(len(episode_rewards))]) / len(episode_rewards)
-        )
+        # episode_total_reward.append(sum(episode_rewards))
+        # episode_length.append(len(episode_rewards))
+        # episode_discounted_return_per_step.append(
+        #     sum([agent.gamma ** i * episode_rewards[i] for i in range(len(episode_rewards))]) / len(episode_rewards)
+        # )
+        [metric.update(episode_rewards, agent, episode=episode, trial=trial) for metric in METRICS]
 
         if episode % save_freq == 0:
             print(f"Episode {episode} of {config['NUM_EPISODES']} completed")
             # Save the Q-table to a file
-            agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}trial_{trial}/q_table_episode_{episode}.npy")
+            agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/trial_{trial}/q_table_episode_{episode}.npy")
 
             # Plot the Q-table while suppressing the MatplotlibDeprecationWarning
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 plot_q_table(agent.q_table, episode_num=episode, save_dir=RunDirectories.Q_TABLE_PLOTS.value)
+    #
+    # # Record performance metrics
+    # experiment_metrics["episode_total_reward"][trial, :] = episode_total_reward
+    # experiment_metrics["episode_length"][trial, :] = episode_length
+    # experiment_metrics["episode_discounted_return_per_step"][trial, :] = episode_discounted_return_per_step
 
-    # Record performance metrics
-    experiment_metrics["episode_total_reward"][trial, :] = episode_total_reward
-    experiment_metrics["episode_length"][trial, :] = episode_length
-    experiment_metrics["episode_discounted_return_per_step"][trial, :] = episode_discounted_return_per_step
+    # Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
+    [metric.finalise() for metric in METRICS]
 
     # Save final checkpoint
     agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/trial_{trial}/q_table_episode"
@@ -145,30 +157,40 @@ for trial in range(config['NUM_TRIALS']):
 
 
 # Save and plot performance metrics
-np.save(f"{RunDirectories.METRIC_DATA.value}/episode_total_reward.npy", experiment_metrics["episode_total_reward"])
-np.save(f"{RunDirectories.METRIC_DATA.value}/episode_length.npy", experiment_metrics["episode_length"])
-np.save(
-    f"{RunDirectories.METRIC_DATA.value}/episode_discounted_return_per_step.npy",
-    experiment_metrics["episode_discounted_return_per_step"]
-)
+# np.save(f"{RunDirectories.METRIC_DATA.value}/episode_total_reward.npy", experiment_metrics["episode_total_reward"])
+# np.save(f"{RunDirectories.METRIC_DATA.value}/episode_length.npy", experiment_metrics["episode_length"])
+# np.save(
+#     f"{RunDirectories.METRIC_DATA.value}/episode_discounted_return_per_step.npy",
+#     experiment_metrics["episode_discounted_return_per_step"]
+# )
+[metric.save(save_dir=RunDirectories.METRIC_DATA.value) for metric in METRICS]
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    plot_training_metrics_multiple_trials(
-        {run_name: experiment_metrics["episode_total_reward"]},
-        metric_name="Total Reward",
-        save_dir=RunDirectories.METRIC_PLOTS.value,
-        show_individual_trials=True
-    )
-    plot_training_metrics_multiple_trials(
-        {run_name: experiment_metrics["episode_length"]},
-        metric_name="Episode Length",
-        save_dir=RunDirectories.METRIC_PLOTS.value,
-        show_individual_trials=True
-    )
-    plot_training_metrics_multiple_trials(
-        {run_name: experiment_metrics["episode_discounted_return_per_step"]},
-        metric_name="Discounted Return",
-        save_dir=RunDirectories.METRIC_PLOTS.value,
-        show_individual_trials=True
-    )
+for metric in METRICS:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        plot_training_metrics_multiple_trials(
+            {run_name: metric.values},
+            metric_name=metric.save_name,
+            save_dir=RunDirectories.METRIC_PLOTS.value,
+            show_individual_trials=True
+        )
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore")
+#     plot_training_metrics_multiple_trials(
+#         {run_name: experiment_metrics["episode_total_reward"]},
+#         metric_name="Total Reward",
+#         save_dir=RunDirectories.METRIC_PLOTS.value,
+#         show_individual_trials=True
+#     )
+#     plot_training_metrics_multiple_trials(
+#         {run_name: experiment_metrics["episode_length"]},
+#         metric_name="Episode Length",
+#         save_dir=RunDirectories.METRIC_PLOTS.value,
+#         show_individual_trials=True
+#     )
+#     plot_training_metrics_multiple_trials(
+#         {run_name: experiment_metrics["episode_discounted_return_per_step"]},
+#         metric_name="Discounted Return",
+#         save_dir=RunDirectories.METRIC_PLOTS.value,
+#         show_individual_trials=True
+#     )
