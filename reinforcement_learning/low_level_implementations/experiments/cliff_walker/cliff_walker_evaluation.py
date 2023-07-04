@@ -1,4 +1,4 @@
-from utils import plot_training_metrics_per_step
+from utils import plot_training_metrics_single_trial
 import numpy as np
 import pickle
 from enum import Enum
@@ -7,7 +7,7 @@ import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 
 from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
-from reinforcement_learning.low_level_implementations.tabular_q_learning.utils import EpsilonGreedySelector
+from reinforcement_learning.low_level_implementations.tabular_q_learning.action_selection import EpsilonGreedySelector
 
 # =============================================================================
 # Evaluation settings
@@ -76,7 +76,7 @@ for metric in METRICS:
             metrics[run_name] = run_metrics[:X_LIMIT]
 
     # Plot
-    plot_training_metrics_per_step(
+    plot_training_metrics_single_trial(
         training_metrics=metrics,
         metric_name=metric,
         save_dir=EvalDirectories.PLOTS.value,

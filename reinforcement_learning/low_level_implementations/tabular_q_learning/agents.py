@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-from low_level_implementations.tabular_q_learning.utils import (EpsilonGreedySelector, SoftmaxSelector)
+from low_level_implementations.tabular_q_learning.action_selection import (EpsilonGreedySelector, SoftmaxSelector)
 
 
 
