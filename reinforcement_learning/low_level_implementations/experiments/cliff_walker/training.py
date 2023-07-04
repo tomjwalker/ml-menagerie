@@ -145,9 +145,6 @@ for trial in range(config['NUM_TRIALS']):
     # experiment_metrics["episode_length"][trial, :] = episode_length
     # experiment_metrics["episode_discounted_return_per_step"][trial, :] = episode_discounted_return_per_step
 
-    # Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
-    [metric.finalise() for metric in METRICS]
-
     # Save final checkpoint
     agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/trial_{trial}/q_table_episode"
                        f"_{config['NUM_EPISODES']}.npy")
@@ -163,6 +160,10 @@ for trial in range(config['NUM_TRIALS']):
 #     f"{RunDirectories.METRIC_DATA.value}/episode_discounted_return_per_step.npy",
 #     experiment_metrics["episode_discounted_return_per_step"]
 # )
+
+# Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
+[metric.finalise() for metric in METRICS]
+
 [metric.save(save_dir=RunDirectories.METRIC_DATA.value) for metric in METRICS]
 
 for metric in METRICS:

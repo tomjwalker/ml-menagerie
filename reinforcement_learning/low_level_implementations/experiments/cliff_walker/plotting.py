@@ -129,7 +129,7 @@ def calculate_experiment_statistics(metric_over_multiple_trials, confidence_inte
     experiment_mean = np.mean(metric_over_multiple_trials, axis=0)
     experiment_std = np.std(metric_over_multiple_trials, axis=0)
     z_value = norm.ppf((1 + confidence_interval) / 2)
-    num_trials = len(metric_over_multiple_trials)
+    num_trials = metric_over_multiple_trials.shape[0]
     upper_bound = experiment_mean + (z_value * (experiment_std / np.sqrt(num_trials)))
     lower_bound = experiment_mean - (z_value * (experiment_std / np.sqrt(num_trials)))
 
