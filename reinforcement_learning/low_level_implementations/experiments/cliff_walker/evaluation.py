@@ -51,24 +51,6 @@ for directory in EvalDirectories:
 # Plot metrics
 # =============================================================================
 
-# for metric in METRICS:
-#
-#     # Load metrics
-#     metrics = {
-#         run_name: np.load(f"{run_directory}/data/metrics/{metric}.npy") for
-#         run_name, run_directory in RUN_DIRECTORIES.items()
-#     }
-#     if X_LIMIT is not None:
-#         for run_name, run_metrics in metrics.items():
-#             metrics[run_name] = run_metrics[:X_LIMIT]
-#
-#     # Plot
-#     plot(
-#         training_metrics=metrics,
-#         metric_name=metric,
-#         save_dir=EvalDirectories.PLOTS.value,
-#     )
-
 # Load metrics
 metrics = defaultdict(dict)
 for run_name, metric_dir in METRICS_DIRECTORIES.items():
