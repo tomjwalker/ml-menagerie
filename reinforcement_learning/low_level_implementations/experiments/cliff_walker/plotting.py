@@ -2,10 +2,15 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
 import os
+from pathlib import Path
 import itertools
 from scipy.stats import norm
 import pandas as pd
 
+
+########################################################################################################################
+# Q and V table plotting functions
+########################################################################################################################
 
 def plot_q_table(q_table, action_num_to_str=None, episode_num=None, save_dir=None):
 
@@ -58,13 +63,146 @@ def plot_q_table(q_table, action_num_to_str=None, episode_num=None, save_dir=Non
     # Adjust the layout to prevent overlap of annotations
     plt.tight_layout()
 
-    # Save the plot
-    if save_dir is not None:
-        plt.savefig(os.path.join(save_dir, f"q_table_episode_{episode_num}.png"))
-        plt.close()
-    else:
-        plt.show()
+    # Save the plot if save_dir and episode_num are provided
+    if save_dir and episode_num is not None:
+        save_dir_path = Path(save_dir)
+        save_dir_path.mkdir(parents=True, exist_ok=True)
+        save_file_path = save_dir_path / f"q_table_episode_{episode_num}.png"
+        plt.savefig(save_file_path)
 
+
+def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, save_dir=None):
+    """
+    Plots a heatmap with arrows on top of it. The heatmap is a square grid of values, and the arrows are placed in the
+    center of each grid cell. The arrows are colored according to the value of the grid cell they are in.
+    Args:
+        array: an agent's Q-table
+        action_num_to_str: maps Q-table row indices to action strings
+            - Frozen Lake: {0: "Left", 1: "Down", 2: "Right", 3: "Up"}
+        episode_num: the episode number
+        save_dir: the directory to save the plot in
+
+    Returns:
+
+    """
+
+    if action_num_to_str is None:
+        action_num_to_str = {
+            0: "up",
+            1: "right",
+            2: "down",
+            3: "left",
+        }
+
+    # Agent's Q table is of shape (num_states, num_actions) whereas this function requires (num_actions, num_states)
+    array = array.T
+
+    # Check if the input array has a square shape
+    if array.shape[1] != int(np.sqrt(array.shape[1]))**2:
+        raise ValueError("Input array dimensions are not square.")
+
+    # Create a reverse mapping dictionary to get action numbers from strings
+    str_to_action_num = {v: k for k, v in action_num_to_str.items()}
+
+    # Calculate the number of rows and columns in the square heatmap
+    n_rows = n_cols = int(np.sqrt(array.shape[1]))
+
+    # Recreate the square space
+    space = np.zeros((n_rows, n_cols))
+
+    # Find the maximum value per column
+    max_columns = np.max(array, axis=0)
+
+    # Reshape the max_columns to match the square space
+    space_values = max_columns.reshape((n_rows, n_cols))
+
+    # Create a meshgrid for the coordinates of the grid cells
+    x, y = np.meshgrid(range(n_cols), range(n_rows))
+
+    # Plot the heatmap with 'plasma' colormap
+    plt.figure(figsize=(6, 4))
+    heatmap = plt.imshow(space_values, cmap='plasma', interpolation='nearest')
+    plt.colorbar(heatmap)
+
+    # Calculate the maximum magnitude for scaling the arrows
+    max_magnitude = np.max(np.abs(array))
+
+    # Calculate and plot the arrows for each element
+    for i in range(array.shape[1]):
+        # Calculate the vector components using action strings
+        up_value = array[str_to_action_num["up"], i]
+        right_value = array[str_to_action_num["right"], i]
+        down_value = array[str_to_action_num["down"], i]
+        left_value = array[str_to_action_num["left"], i]
+
+        # Scale the values to the range [0, 1]
+        total_sum = up_value + right_value + down_value + left_value
+        if total_sum > 0:
+            up_value /= total_sum
+            right_value /= total_sum
+            down_value /= total_sum
+            left_value /= total_sum
+
+        # Calculate the center coordinates of the grid cell
+        x_center = x.flatten()[i]
+        y_center = y.flatten()[i]
+
+        # Calculate the arrow colors based on the background color
+        arrow_colors = ['black', 'black', 'black', 'black']
+        if space_values[y_center, x_center] < 0.5:
+            arrow_colors = ['white', 'white', 'white', 'white']
+
+        # Calculate the half length of the arrow
+        arrow_length = 0.1
+        arrow_half_length = arrow_length / 2
+
+        # Plot the arrows centered in the grid cell
+        plt.arrow(
+            x_center, y_center + arrow_half_length,
+            0, -up_value * arrow_length,
+            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[0], ec=arrow_colors[0]
+        )
+        plt.arrow(
+            x_center + arrow_half_length, y_center,
+            right_value * arrow_length, 0,
+            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[1], ec=arrow_colors[1]
+        )
+        plt.arrow(
+            x_center, y_center - arrow_half_length,
+            0, down_value * arrow_length,
+            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[2], ec=arrow_colors[2]
+        )
+        plt.arrow(
+            x_center - arrow_half_length, y_center,
+            -left_value * arrow_length, 0,
+            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[3], ec=arrow_colors[3]
+        )
+
+    # Set the tick labels for the x and y axes
+    plt.xticks(range(n_cols), range(n_cols))
+    plt.yticks(range(n_rows), range(n_rows))
+
+    # Set title
+    if episode_num is not None:
+        plt.title(f"V-table after {episode_num} episodes")
+    else:
+        plt.title("V-table")
+
+    # Adjust the layout to prevent overlap of annotations
+    plt.tight_layout()
+
+    # Save the plot if save_dir and episode_num are provided
+    if save_dir and episode_num is not None:
+        save_dir_path = Path(save_dir)
+        save_dir_path.mkdir(parents=True, exist_ok=True)
+        save_file_path = save_dir_path / f"v_table_episode_{episode_num}.png"
+        plt.savefig(save_file_path)
+
+
+
+########################################################################################################################
+# Metric plotting
+########################################################################################################################
 
 def plot_training_metrics_single_trial(training_metrics, window_size=100, metric_name=None, save_dir=None):
     """
