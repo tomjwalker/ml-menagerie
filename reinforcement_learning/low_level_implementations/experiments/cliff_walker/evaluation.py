@@ -1,8 +1,9 @@
-from utils import plot_training_metrics_single_trial
+from plotting import plot_training_metrics_single_trial, plot_training_metrics_multiple_trials
 import numpy as np
 import pickle
 from enum import Enum
 import os
+from collections import defaultdict
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 
@@ -17,32 +18,19 @@ EVAL_NAME = "action_selection_sweep"
 
 # Specify runs to inspect
 RUN_DIRECTORIES = {
-    "learning_rate_0.1": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
-                         "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_False",
-    # "learning_rate_0.1_slippery": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
-    #                               "__as_EpsilonGreedySelector(epsilon=0.1)__episodes_10000__is_slippery_True",
-    # "learning_rate_0.1_slippery_softmax_selection":
-    #     ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__as_SoftmaxSelector("
-    #     "temperature=1)__episodes_10000__is_slippery_True",
-    "learning_rate_0.1_softmax_selection":
-        ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__as_SoftmaxSelector("
-        "temperature=0.1)__episodes_10000__is_slippery_False",
-    # "learning_rate_0.25_softmax_selection":
-    #     ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9__as_SoftmaxSelector("
-    #     "temperature=0.1)__episodes_10000__is_slippery_False",
-    "learning_rate_0.1_eg_linear_decay": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
-                                         "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_linear__episodes_10000"
+    "learning_rate_0.1": ".cache/tabular_q_learning__lr_0.1__df_0.9__as_EpsilonGreedySelector"
+                         "__epsilon_0_1_decay_scheme_None__episodes_2000__is_slippery_False",
+    "learning_rate_0.1_eg_linear_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
+                                         "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_linear__episodes_2000"
                                          "__is_slippery_False",
-    "learning_rate_0.1_eg_exponential_decay": ".cache/tabular_q_learning__vanilla_epsilon_greedy__lr_0.1__df_0.9"
+    "learning_rate_0.1_eg_exponential_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_exponential__episodes"
-                                              "_10000__is_slippery_False",
+                                              "_2000__is_slippery_False",
 }
 
-METRICS = [
-    "episode_discounted_return_per_step",
-    "episode_length",
-    "episode_total_reward",
-]
+METRICS_DIRECTORIES = {
+    run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
+}
 
 X_LIMIT = 500    # None for no limit
 
@@ -59,26 +47,46 @@ for directory in EvalDirectories:
         os.makedirs(directory.value)
 
 
-
 # =============================================================================
 # Plot metrics
 # =============================================================================
 
-for metric in METRICS:
+# for metric in METRICS:
+#
+#     # Load metrics
+#     metrics = {
+#         run_name: np.load(f"{run_directory}/data/metrics/{metric}.npy") for
+#         run_name, run_directory in RUN_DIRECTORIES.items()
+#     }
+#     if X_LIMIT is not None:
+#         for run_name, run_metrics in metrics.items():
+#             metrics[run_name] = run_metrics[:X_LIMIT]
+#
+#     # Plot
+#     plot(
+#         training_metrics=metrics,
+#         metric_name=metric,
+#         save_dir=EvalDirectories.PLOTS.value,
+#     )
 
-    # Load metrics
-    metrics = {
-        run_name: np.load(f"{run_directory}/data/metrics/{metric}.npy") for
-        run_name, run_directory in RUN_DIRECTORIES.items()
-    }
-    if X_LIMIT is not None:
-        for run_name, run_metrics in metrics.items():
-            metrics[run_name] = run_metrics[:X_LIMIT]
+# Load metrics
+metrics = defaultdict(dict)
+for run_name, metric_dir in METRICS_DIRECTORIES.items():
+    # Loop over all files present in the metrics directory
+    for metric_file in os.listdir(metric_dir):
+        # Unpickle the metric
+        with open(f"{metric_dir}/{metric_file}", "rb") as f:
+            metric = pickle.load(f)
+        if X_LIMIT is not None:
+            metric.values = metric.values[:, :X_LIMIT]
+        # Add to the dictionary of metrics
+        metrics[metric.save_name][run_name] = metric.values
 
-    # Plot
-    plot_training_metrics_single_trial(
-        training_metrics=metrics,
-        metric_name=metric,
+# Plot training metrics. Loop over all metrics, and plot all runs for each metric
+for metric_name, runs_dict in metrics.items():
+    plot_training_metrics_multiple_trials(
+        metrics_over_multiple_trials=runs_dict,
+        metric_name=metric_name,
         save_dir=EvalDirectories.PLOTS.value,
     )
 
