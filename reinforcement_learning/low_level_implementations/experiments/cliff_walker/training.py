@@ -6,7 +6,12 @@ from enum import Enum
 import os
 import pickle
 
-from plotting import plot_q_table, plot_training_metrics_single_trial, plot_training_metrics_multiple_trials
+from plotting import (
+    plot_q_table,
+    plot_training_metrics_single_trial,
+    plot_training_metrics_multiple_trials,
+    plot_v_table_with_arrows,
+)
 from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
 from reinforcement_learning.low_level_implementations.tabular_q_learning.action_selection import (EpsilonGreedySelector,
                                                                                                   SoftmaxSelector)
@@ -44,6 +49,7 @@ class RunDirectories(Enum):
     Q_TABLE_DATA = f"./.cache/{run_name}/data/q_table"
     METRIC_DATA = f"./.cache/{run_name}/data/metrics"
     Q_TABLE_PLOTS = f"./.cache/{run_name}/plots/q_table"
+    V_TABLE_PLOTS = f"./.cache/{run_name}/plots/v_table"
     METRIC_PLOTS = f"./.cache/{run_name}/plots/metrics"
 
 
@@ -144,14 +150,32 @@ for trial in range(config['NUM_TRIALS']):
             # Plot the Q-table while suppressing the MatplotlibDeprecationWarning
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                plot_q_table(agent.q_table, episode_num=episode, save_dir=RunDirectories.Q_TABLE_PLOTS.value)
+                plot_q_table(
+                    agent.q_table,
+                    episode_num=episode,
+                    save_dir=f"{RunDirectories.Q_TABLE_PLOTS.value}/trial_{trial}/"
+                )
+                plot_v_table_with_arrows(
+                    agent.q_table,
+                    episode_num=episode,
+                    save_dir=f"{RunDirectories.V_TABLE_PLOTS.value}/trial_{trial}/"
+                )
 
     # Save final checkpoint
     agent.save_q_table(f"{RunDirectories.Q_TABLE_DATA.value}/trial_{trial}/q_table_episode"
                        f"_{config['NUM_EPISODES']}.npy")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        plot_q_table(agent.q_table, episode_num=config['NUM_EPISODES'], save_dir=RunDirectories.Q_TABLE_PLOTS.value)
+        plot_q_table(
+            agent.q_table,
+            episode_num=config['NUM_EPISODES'],
+            save_dir=f"{RunDirectories.Q_TABLE_PLOTS.value}/trial_{trial}/"
+        )
+        plot_v_table_with_arrows(
+            agent.q_table,
+            episode_num=config['NUM_EPISODES'],
+            save_dir=f"{RunDirectories.V_TABLE_PLOTS.value}/trial_{trial}/"
+        )
 
 
 # Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
