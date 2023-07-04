@@ -6,6 +6,7 @@ import os
 from collections import defaultdict
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
+from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
 from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
 from reinforcement_learning.low_level_implementations.tabular_q_learning.action_selection import EpsilonGreedySelector
@@ -14,27 +15,27 @@ from reinforcement_learning.low_level_implementations.tabular_q_learning.action_
 # Evaluation settings
 # =============================================================================
 
-EVAL_NAME = "action_selection_sweep"
+EVAL_NAME = "action_selection_sweep_8"
 
 # Specify runs to inspect
 RUN_DIRECTORIES = {
     "learning_rate_0.1": ".cache/tabular_q_learning__lr_0.1__df_0.9__as_EpsilonGreedySelector"
-                         "__epsilon_0_1_decay_scheme_None__episodes_2000__is_slippery_False",
+                         "__epsilon_0_1_decay_scheme_None__episodes_2000__is_slippery_False__map_size_8",
     "learning_rate_0.1_eg_linear_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_linear__episodes_2000"
-                                         "__is_slippery_False",
+                                         "__is_slippery_False__map_size_8",
     "learning_rate_0.1_eg_exponential_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_exponential__episodes"
-                                              "_2000__is_slippery_False",
+                                              "_2000__is_slippery_False__map_size_8",
 }
 
 METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
 }
 
-X_LIMIT = 500    # None for no limit
+X_LIMIT = 2000    # None for no limit
 
-MAKE_VIDEOS = False
+MAKE_VIDEOS = True
 
 
 class EvalDirectories(Enum):
@@ -88,6 +89,10 @@ if MAKE_VIDEOS:
     # For each config, get multi-episode videos of behaviour at the start, middle, and end of training
     for run_name, config in configs.items():
 
+        # Get best performing run from the trial with the maximum accumulated discounted reward
+        cum_return_all_trials = metrics["cumulative_discounted_return"][run_name]
+        best_trial = np.argmax(cum_return_all_trials[:, -1])
+
         # Get mid-training Q-table
         save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
         mid_training_episode = save_freq * (config["NUM_CHECKPOINTS"] // 2)    # Done this way as checkpoints were worked
@@ -97,8 +102,15 @@ if MAKE_VIDEOS:
         for training_episode in [0, mid_training_episode, config["NUM_EPISODES"]]:
 
             # Load environment (most immediately useful for defining the state and action space for instantiating the agent)
-            env = gym.make('FrozenLake-v1', render_mode="rgb_array_list", is_slippery=config['IS_SLIPPERY'])
-            # env = RecordVideo(env, video_folder=f"{EvalDirectories.VIDEOS.value}/episode_{training_episode}")
+            if config.get("LAKE_SIZE") is not None:
+                env = gym.make(
+                    'FrozenLake-v1',
+                    desc=generate_random_map(size=config["LAKE_SIZE"], p=0.8, seed=42),
+                    render_mode="rgb_array_list",
+                    is_slippery=config['IS_SLIPPERY']
+                )
+            else:
+                env = gym.make('FrozenLake-v1', render_mode="rgb_array_list", is_slippery=config['IS_SLIPPERY'])
 
             # TODO: Load agent and render activity at stages of training loop
             agent = Agent(
@@ -110,7 +122,8 @@ if MAKE_VIDEOS:
             )
 
             # Load Q-table
-            q_table = np.load(f"{RUN_DIRECTORIES[run_name]}/data/q_table/q_table_episode_{training_episode}.npy")
+            q_table = np.load(f"{RUN_DIRECTORIES[run_name]}/data/q_table/trial_{best_trial}/q_table_episode"
+                              f"_{training_episode}.npy")
             agent.q_table = q_table
 
             # Want to record a video of 10 episodes of the agent's activity, at this stage of training

@@ -1,4 +1,5 @@
 import gymnasium as gym
+from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 import numpy as np
 import warnings    # There's an annoying warning in matplotlib to suppress
 from enum import Enum
@@ -25,15 +26,17 @@ config = {
     "RENDER_MODE": "none",   # "human", "none"
     "IS_SLIPPERY": False,
     "NUM_CHECKPOINTS": 10,    # Per trial, for saving q-tables
+    "LAKE_SIZE": 8,   # If None, uses default 4x4 lake, else generates random lake of size LAKE_SIZE x LAKE_SIZE
     # Agent parameters
     "AGENT_NAME": "tabular_q_learning",
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
-    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="exponential"),
+    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme=None),
 }
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
 run_name = f"{config['AGENT_NAME']}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
-           f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_{config['IS_SLIPPERY']}"
+           f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_" \
+           f"{config['IS_SLIPPERY']}__map_size_{config['LAKE_SIZE']}"
 
 
 # Training artefact directories
@@ -80,7 +83,15 @@ for trial in range(config['NUM_TRIALS']):
     )
 
     # Instantiate the environment and agent
-    env = gym.make('FrozenLake-v1', render_mode=config['RENDER_MODE'], is_slippery=config['IS_SLIPPERY'])
+    if config["LAKE_SIZE"] is None:
+        env = gym.make('FrozenLake-v1', render_mode=config['RENDER_MODE'], is_slippery=config['IS_SLIPPERY'])
+    else:
+        env = gym.make(
+            'FrozenLake-v1',
+            desc=generate_random_map(size=config["LAKE_SIZE"], p=0.8, seed=42),
+            render_mode=config['RENDER_MODE'],
+            is_slippery=config['IS_SLIPPERY']
+        )
     agent = Agent(
         gamma=config['DISCOUNT_FACTOR'],
         alpha=config['LEARNING_RATE'],
