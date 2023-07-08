@@ -94,7 +94,7 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
             3: "left",
         }
 
-    # Agent's Q table is of shape (num_states, num_actions) whereas this function requires (num_actions, num_states)
+    # QLearningAgent's Q table is of shape (num_states, num_actions) whereas this function requires (num_actions, num_states)
     array = array.T
 
     # Check if the input array has a square shape
@@ -153,29 +153,30 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
             arrow_colors = ['white', 'white', 'white', 'white']
 
         # Calculate the half length of the arrow
-        arrow_length = 0.1
+        arrow_length = 0.15
         arrow_half_length = arrow_length / 2
+        head_width = arrow_length * 0.75
 
         # Plot the arrows centered in the grid cell
         plt.arrow(
-            x_center, y_center + arrow_half_length,
-            0, -up_value * arrow_length,
-            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[0], ec=arrow_colors[0]
+            x_center, y_center,
+            0, up_value * arrow_length,
+            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[0], ec=arrow_colors[0]
         )
         plt.arrow(
-            x_center + arrow_half_length, y_center,
+            x_center, y_center,
             right_value * arrow_length, 0,
-            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[1], ec=arrow_colors[1]
+            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[1], ec=arrow_colors[1]
         )
         plt.arrow(
-            x_center, y_center - arrow_half_length,
-            0, down_value * arrow_length,
-            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[2], ec=arrow_colors[2]
+            x_center, y_center,
+            0, -down_value * arrow_length,
+            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[2], ec=arrow_colors[2]
         )
         plt.arrow(
-            x_center - arrow_half_length, y_center,
+            x_center, y_center,
             -left_value * arrow_length, 0,
-            head_width=arrow_length, head_length=arrow_half_length, fc=arrow_colors[3], ec=arrow_colors[3]
+            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[3], ec=arrow_colors[3]
         )
 
     # Set the tick labels for the x and y axes

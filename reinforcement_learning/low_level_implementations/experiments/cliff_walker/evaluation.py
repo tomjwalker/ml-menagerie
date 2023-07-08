@@ -8,8 +8,8 @@ import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
-from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
-from reinforcement_learning.low_level_implementations.tabular_q_learning.action_selection import EpsilonGreedySelector
+from reinforcement_learning.low_level_implementations.algorithms.agents import QLearningAgent
+from reinforcement_learning.low_level_implementations.algorithms.action_selection import EpsilonGreedySelector
 
 # =============================================================================
 # Evaluation settings
@@ -113,7 +113,7 @@ if MAKE_VIDEOS:
                 env = gym.make('FrozenLake-v1', render_mode="rgb_array_list", is_slippery=config['IS_SLIPPERY'])
 
             # TODO: Load agent and render activity at stages of training loop
-            agent = Agent(
+            agent = QLearningAgent(
                 num_states=env.observation_space.n,
                 num_actions=env.action_space.n,
                 action_selector=config['ACTION_SELECTOR'],
