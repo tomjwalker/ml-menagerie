@@ -1,6 +1,50 @@
 import numpy as np
 import os
 
+# TODO: Refactor so all agents inherit from Agent class
+# TODO: Add save and load methods to all agents - replace Q table save with full agent pickle save
+# TODO: Double Q-learning save and load methods temporary - averages the two Q tables
+
+class Agent:
+    """Superclass for reinforcement learning agents."""
+
+    def __init__(self, num_states, num_actions):
+        """
+        Initialize the Agent object.
+        """
+        self.num_states = num_states
+        self.num_actions = num_actions
+
+    def choose_action(self, state):
+        """
+        Choose an action given the state.
+        """
+        raise NotImplementedError("Subclasses must implement the `choose_action` method.")
+
+    def update(self, state, action, reward, next_state, done):
+        """
+        Update the agent's knowledge based on the observed sample.
+        """
+        raise NotImplementedError("Subclasses must implement the `update` method.")
+
+    def save(self, save_dir):
+        """
+        Save the agent to a file.
+
+        Args:
+            save_dir (str): The directory to save the file in.
+        """
+        raise NotImplementedError("Subclasses must implement the `save` method.")
+
+    def load(self, save_dir):
+        """
+        Load the agent from a file.
+
+        Args:
+            save_dir (str): The directory to load the file from.
+        """
+        raise NotImplementedError("Subclasses must implement the `load` method.")
+
 
 class QLearningAgent:
     """
@@ -83,6 +127,10 @@ class DoubleQLearningAgent:
         self.q_table_1 = np.zeros((self.num_states, self.num_actions), dtype=float)
         self.q_table_2 = np.zeros((self.num_states, self.num_actions), dtype=float)
 
+    @property
+    def q_table(self):
+        return self.q_table_1 + self.q_table_2
+
     def choose_action(self, state, episode):
         """
         Select an action using an exploration-exploitation strategy
@@ -125,17 +173,22 @@ class DoubleQLearningAgent:
         """
         Save Q-table to a file
         """
+
+        # TODO - temporary hack. Replace with functions to save (and plot) both Q-tables
         if not os.path.exists(os.path.dirname(filepath)):
             os.makedirs(os.path.dirname(filepath))
 
+        q_table_aggregate = self.q_table_1 + self.q_table_2
+
         # Save Q-table as npy file
-        np.save(filepath, self.q_table)
+        np.save(filepath, q_table_aggregate)
 
     def load_q_table(self, filepath):
         """
         Load Q-table from a file
         """
-        self.q_table = np.load(filepath)
+        # TODO
+        pass
 
 
 class SarsaAgent:
