@@ -129,6 +129,11 @@ class DoubleQLearningAgent:
 
     @property
     def q_table(self):
+        """
+        Return an aggregate (sum) of the two Q tables.
+
+        Useful for action selection, as well as (temporarily) for saving, loading and plotting.
+        """
         return self.q_table_1 + self.q_table_2
 
     def choose_action(self, state, episode):
@@ -137,7 +142,7 @@ class DoubleQLearningAgent:
         """
 
         # Sutton & Barto pp. 136 - behaviour policy aggregation of estimates e.g. sum or mean
-        aggregated_q_table = self.q_table_1 + self.q_table_2
+        aggregated_q_table = self.q_table
 
         possible_action_values = aggregated_q_table[state, :]
 
