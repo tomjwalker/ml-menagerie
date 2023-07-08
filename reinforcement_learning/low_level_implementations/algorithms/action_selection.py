@@ -9,6 +9,9 @@ class ActionSelector:
     def __str__(self):
         raise NotImplementedError
 
+    def get_probabilities(self, q_values_for_current_state, episode):
+        raise NotImplementedError
+
 
 class EpsilonGreedySelector(ActionSelector):
 
@@ -80,6 +83,19 @@ class EpsilonGreedySelector(ActionSelector):
     def __str__(self):
         return f"EpsilonGreedySelector__epsilon_{self.epsilon}_decay_scheme_{self.decay_scheme}".replace(".", "_")
 
+    def get_probabilities(self, q_values_for_current_state, episode):
+
+        self.update_epsilon(episode)
+        num_actions = len(q_values_for_current_state)
+
+        # Get best action(s) (ties are broken randomly)
+        best_actions = np.flatnonzero(q_values_for_current_state == q_values_for_current_state.max())
+        probabilities = np.zeros(num_actions)
+        probabilities[best_actions] = (1 - self.epsilon) / len(best_actions)
+        probabilities += self.epsilon / num_actions
+
+        return probabilities
+
 
 class SoftmaxSelector(ActionSelector):
 
@@ -101,3 +117,11 @@ class SoftmaxSelector(ActionSelector):
 
     def __str__(self):
         return f"SoftmaxSelector(temperature={self.temperature})"
+
+    def get_probabilities(self, q_values_for_current_state, episode):
+
+        # Compute the softmax probabilities
+        probabilities = np.exp(q_values_for_current_state / self.temperature)
+        probabilities = probabilities / np.sum(probabilities)
+
+        return probabilities
