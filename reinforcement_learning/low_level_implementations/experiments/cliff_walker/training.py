@@ -34,13 +34,13 @@ config = {
     "NUM_CHECKPOINTS": 10,    # Per trial, for saving q-tables
     "LAKE_SIZE": 8,   # If None, uses default 4x4 lake, else generates random lake of size LAKE_SIZE x LAKE_SIZE
     # QLearningAgent parameters
-    "AGENT_TYPE": SarsaAgent,
+    "AGENT_TYPE": ExpectedSarsaAgent,
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
     "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear"),
 }
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
-run_name = f"{type(config['AGENT_TYPE']).__name__}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
+run_name = f"{config['AGENT_TYPE'].__name__}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
            f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_" \
            f"{config['IS_SLIPPERY']}__map_size_{config['LAKE_SIZE']}"
 

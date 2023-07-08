@@ -15,19 +15,33 @@ from reinforcement_learning.low_level_implementations.algorithms.action_selectio
 # Evaluation settings
 # =============================================================================
 
-EVAL_NAME = "action_selection_sweep_8"
+EVAL_NAME = "agent_sweep"
+
+# # Specify runs to inspect
+# RUN_DIRECTORIES = {
+#     "learning_rate_0.1": ".cache/tabular_q_learning__lr_0.1__df_0.9__as_EpsilonGreedySelector"
+#                          "__epsilon_0_1_decay_scheme_None__episodes_2000__is_slippery_False__map_size_8",
+#     "learning_rate_0.1_eg_linear_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
+#                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_linear__episodes_2000"
+#                                          "__is_slippery_False__map_size_8",
+#     "learning_rate_0.1_eg_exponential_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
+#                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_exponential__episodes"
+#                                               "_2000__is_slippery_False__map_size_8",
+# }
 
 # Specify runs to inspect
 RUN_DIRECTORIES = {
-    "learning_rate_0.1": ".cache/tabular_q_learning__lr_0.1__df_0.9__as_EpsilonGreedySelector"
-                         "__epsilon_0_1_decay_scheme_None__episodes_2000__is_slippery_False__map_size_8",
-    "learning_rate_0.1_eg_linear_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
-                                         "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_linear__episodes_2000"
-                                         "__is_slippery_False__map_size_8",
-    "learning_rate_0.1_eg_exponential_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
-                                         "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_exponential__episodes"
-                                              "_2000__is_slippery_False__map_size_8",
+    "qlearning_eg_linear_decay": ".cache/QLearningAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
+                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
+    "double_qlearning_eg_linear_decay": ".cache/DoubleQLearningAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
+                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
+    "sarsa_eg_linear_decay": ".cache/SarsaAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
+                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
+    "expected_sarsa_eg_linear_decay": ".cache/ExpectedSarsaAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
+                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
+
 }
+
 
 METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
