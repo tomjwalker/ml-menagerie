@@ -1,1 +1,1 @@
-from .tabular_q_learning.agents import Agent
+from .algorithms.agents import QLearningAgent

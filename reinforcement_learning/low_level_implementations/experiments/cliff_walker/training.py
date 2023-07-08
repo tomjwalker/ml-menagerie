@@ -6,21 +6,20 @@ from enum import Enum
 import os
 import pickle
 
-from plotting import (
-    plot_q_table,
-    plot_training_metrics_single_trial,
-    plot_training_metrics_multiple_trials,
-    plot_v_table_with_arrows,
-)
-from reinforcement_learning.low_level_implementations.tabular_q_learning.agents import Agent
-from reinforcement_learning.low_level_implementations.tabular_q_learning.action_selection import (EpsilonGreedySelector,
-                                                                                                  SoftmaxSelector)
+from plotting import (plot_q_table, plot_training_metrics_multiple_trials, plot_v_table_with_arrows)
+
+from reinforcement_learning.low_level_implementations.algorithms.agents import QLearningAgent
+from reinforcement_learning.low_level_implementations.algorithms.agents import SarsaAgent
+
+from reinforcement_learning.low_level_implementations.algorithms.action_selection import EpsilonGreedySelector
+from reinforcement_learning.low_level_implementations.algorithms.action_selection import SoftmaxSelector
+
 from metrics import (EpisodeReward, EpisodeLength, DiscountedReturn, CumulativeReward, CumulativeDiscountedReturn)
+
 
 ########################################################################################################################
 # Run parameters
 ########################################################################################################################
-
 
 # Training configuration parameters
 config = {
@@ -32,14 +31,14 @@ config = {
     "IS_SLIPPERY": False,
     "NUM_CHECKPOINTS": 10,    # Per trial, for saving q-tables
     "LAKE_SIZE": 8,   # If None, uses default 4x4 lake, else generates random lake of size LAKE_SIZE x LAKE_SIZE
-    # Agent parameters
-    "AGENT_NAME": "tabular_q_learning",
+    # QLearningAgent parameters
+    "AGENT_TYPE": SarsaAgent,
     "LEARNING_RATE": 0.1,
     "DISCOUNT_FACTOR": 0.9,
-    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme=None),
+    "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear"),
 }
 save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
-run_name = f"{config['AGENT_NAME']}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
+run_name = f"{type(config['AGENT_TYPE']).__name__}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
            f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_" \
            f"{config['IS_SLIPPERY']}__map_size_{config['LAKE_SIZE']}"
 
@@ -98,7 +97,7 @@ for trial in range(config['NUM_TRIALS']):
             render_mode=config['RENDER_MODE'],
             is_slippery=config['IS_SLIPPERY']
         )
-    agent = Agent(
+    agent = config["AGENT_TYPE"](
         gamma=config['DISCOUNT_FACTOR'],
         alpha=config['LEARNING_RATE'],
         action_selector=config['ACTION_SELECTOR'],
@@ -121,14 +120,20 @@ for trial in range(config['NUM_TRIALS']):
         episode_rewards = []
         while not (terminated or truncated):
 
-            # Agent action decision
+            # QLearningAgent action decision
             action = agent.choose_action(state, episode)
 
             # Environment transition
             new_state, reward, terminated, truncated, info = env.step(action)
 
-            # Agent learning
-            agent.update_q_table(state, action, new_state, reward)
+            # QLearningAgent learning
+            if isinstance(agent, QLearningAgent):
+                agent.update_q_table(state, action, new_state, reward)
+            elif isinstance(agent, SarsaAgent):
+                agent.update_q_table(state, action, new_state, reward, episode)
+            else:
+                agent_type = type(agent).__name__
+                raise ValueError(f"Unsupported agent type: {agent_type}.")
 
             # Update state
             state = new_state
