@@ -34,7 +34,7 @@ RUN_DIRECTORIES = {
     "qlearning_eg_linear_decay": ".cache/QLearningAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
                                  "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
     "double_qlearning_eg_linear_decay": ".cache/DoubleQLearningAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
-                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
+                                 "epsilon_0_1_decay_scheme_linear__episodes_10000__is_slippery_False__map_size_8",
     "sarsa_eg_linear_decay": ".cache/SarsaAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
                                  "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
     "expected_sarsa_eg_linear_decay": ".cache/ExpectedSarsaAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
@@ -47,9 +47,9 @@ METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
 }
 
-X_LIMIT = 2000    # None for no limit
+X_LIMIT = 10000    # None for no limit
 
-MAKE_VIDEOS = True
+MAKE_VIDEOS = False
 
 
 class EvalDirectories(Enum):
