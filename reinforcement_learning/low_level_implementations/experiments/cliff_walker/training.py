@@ -10,6 +10,8 @@ from plotting import (plot_q_table, plot_training_metrics_multiple_trials, plot_
 
 from reinforcement_learning.low_level_implementations.algorithms.agents import QLearningAgent
 from reinforcement_learning.low_level_implementations.algorithms.agents import SarsaAgent
+from reinforcement_learning.low_level_implementations.algorithms.agents import ExpectedSarsaAgent
+from reinforcement_learning.low_level_implementations.algorithms.agents import DoubleQLearningAgent
 
 from reinforcement_learning.low_level_implementations.algorithms.action_selection import EpsilonGreedySelector
 from reinforcement_learning.low_level_implementations.algorithms.action_selection import SoftmaxSelector
@@ -126,10 +128,10 @@ for trial in range(config['NUM_TRIALS']):
             # Environment transition
             new_state, reward, terminated, truncated, info = env.step(action)
 
-            # QLearningAgent learning
-            if isinstance(agent, QLearningAgent):
+            # Learning. Different agents have different update rule signatures
+            if isinstance(agent, (QLearningAgent, DoubleQLearningAgent)):
                 agent.update_q_table(state, action, new_state, reward)
-            elif isinstance(agent, SarsaAgent):
+            elif isinstance(agent, (SarsaAgent, ExpectedSarsaAgent)):
                 agent.update_q_table(state, action, new_state, reward, episode)
             else:
                 agent_type = type(agent).__name__
