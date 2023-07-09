@@ -51,7 +51,7 @@ class RunDirectories:
                 os.makedirs(attribute)
 
 
-def add_metrics_to_runlog(all_metrics_dict, directories_obj, run_name, clean_runlog=True):
+def add_metrics_to_runlog(all_metrics_dict, directories_obj, clean_runlog=True):
     """
     Adds metric data from across all trials to the run log csv
     If clean_runlog == True, will remove all rows in the runlog which don't have any run data (after merging the
@@ -59,21 +59,27 @@ def add_metrics_to_runlog(all_metrics_dict, directories_obj, run_name, clean_run
     """
 
     all_metrics_df = pd.DataFrame(all_metrics_dict).T
+    all_metrics_df = all_metrics_df.reset_index().rename(columns={"index": "run_name"})
 
     run_log = pd.read_csv(directories_obj.runlog_filepath)
 
-    # Merge summary metrics with run log.
-    # run_log may or may not already have columns matching all_metrics_df. If it does, those columns will be overwritten
-    # with the values from all_metrics_df. If not, new columns will be added to run_log
-    run_log = pd.concat([run_log, all_metrics_df], axis=1)
+    current_metric_cols = all_metrics_df.columns
+    if set(current_metric_cols).issubset(set(run_log.columns)):
+        run_name = current_metric_cols[0]
+        metric_cols = current_metric_cols[1:]
+        runs_to_update = set(all_metrics_df[run_name])
+        run_log.loc[run_log[run_name].isin(runs_to_update), metric_cols] = \
+            all_metrics_df.loc[all_metrics_df[run_name].isin(runs_to_update), metric_cols].values
+    else:
+        run_log = pd.merge(run_log, all_metrics_df, on="run_name", how="left")
 
-    # TODO: more robust way to check which cols are metric data
-    metric_cols = ["best_" in column for column in run_log.columns]
+    if clean_runlog:
+        # TODO: more robust way to check which cols are metric data
+        metric_cols = ["best_" in column for column in run_log.columns]
 
-    # if clean_runlog:
-    #     metric_data = run_log.iloc[:, metric_cols]
-    #     no_run_data = metric_data.isna().all(axis=1)
-    #     run_log = run_log[~no_run_data]
+        metric_data = run_log.iloc[:, metric_cols]
+        no_run_data = metric_data.isna().all(axis=1)
+        run_log = run_log[~no_run_data]
 
     run_log.to_csv(directories_obj.runlog_filepath, index=False)
 
@@ -111,16 +117,8 @@ for config in TRAINING_CONFIGS:
     for trial in range(num_trials):
 
         # Instantiate the environment and agent
-        if config.environment_config.lake_size is None:
-            env = gym.make('FrozenLake-v1', render_mode=config.environment_config.render_mode,
-                           is_slippery=config.environment_config.is_slippery)
-        else:
-            env = gym.make(
-                'FrozenLake-v1',
-                desc=generate_random_map(size=config.environment_config.lake_size, p=0.8, seed=42),
-                render_mode=config.environment_config.render_mode,
-                is_slippery=config.environment_config.is_slippery
-            )
+        env = config.environment_config()
+
         agent = config.agent_config.agent_type(
             gamma=config.agent_config.discount_factor,
             alpha=config.agent_config.learning_rate,
@@ -237,4 +235,4 @@ for config in TRAINING_CONFIGS:
 
     all_config_summary_metrics[run_name] = summary_metrics
 
-add_metrics_to_runlog(all_config_summary_metrics, directories, run_name, clean_runlog=True)
+add_metrics_to_runlog(all_config_summary_metrics, directories, clean_runlog=True)

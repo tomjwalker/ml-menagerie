@@ -15,6 +15,7 @@ from reinforcement_learning.low_level_implementations.algorithms.action_selectio
 # Define environment configs
 ENVIRONMENT_CONFIGS = [
     # FrozenLakeConfig(
+    #     env_name = "FrozenLake-v1",
     #     num_trials=10,
     #     num_episodes=5000,
     #     max_steps_per_episode=100,
@@ -24,11 +25,12 @@ ENVIRONMENT_CONFIGS = [
     #     is_slippery=False
     # ),
     FrozenLakeConfig(
-        num_trials=2,
+        env_name="FrozenLake-v1",
+        num_trials=3,
         num_episodes=100,
         max_steps_per_episode=100,
         render_mode="none",
-        num_checkpoints=5,
+        num_checkpoints=2,
         lake_size=4,
         is_slippery=False
     ),

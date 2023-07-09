@@ -3,23 +3,44 @@ import pickle
 import os
 import pandas as pd
 
+import gymnasium as gym
+from gymnasium.envs.toy_text.frozen_lake import generate_random_map
+
 
 class EnvironmentConfig:
-    def __init__(self, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints):
+    def __init__(self, env_name, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints):
         self.num_trials = num_trials
         self.num_episodes = num_episodes
         self.max_steps_per_episode = max_steps_per_episode
         self.render_mode = render_mode   # "human", "none"
         self.num_checkpoints = num_checkpoints    # Per trial, for saving q-tables
+        self.env_name = env_name
+
+    def __call__(self):
+        env = gym.make(self.env_name, render_mode=self.render_mode)
+        return env
 
 
 class FrozenLakeConfig(EnvironmentConfig):
-    def __init__(self, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints, lake_size,
+    def __init__(self, env_name, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints,
+                 lake_size,
                  is_slippery):
-        super().__init__(num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints)
+        super().__init__(env_name, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints)
         # Next attribute: if None, uses default 4x4 lake, else generates random lake of size LAKE_SIZE x LAKE_SIZE
         self.lake_size = lake_size
         self.is_slippery = is_slippery
+
+    def __call__(self):
+        if self.lake_size is None:
+            env = gym.make('FrozenLake-v1', render_mode=self.render_mode, is_slippery=self.is_slippery)
+        else:
+            env = gym.make(
+                'FrozenLake-v1',
+                desc=generate_random_map(size=self.lake_size, p=0.8, seed=42),
+                render_mode=self.render_mode,
+                is_slippery=self.is_slippery
+            )
+        return env
 
 
 class AgentConfig:
