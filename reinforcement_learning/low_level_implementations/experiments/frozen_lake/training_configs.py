@@ -1,4 +1,4 @@
-from configs import FrozenLakeConfig, AgentConfig, TrainingConfig
+from configs import CliffWalkingConfig, FrozenLakeConfig, AgentConfig, TrainingConfig
 
 from reinforcement_learning.low_level_implementations.algorithms.agents import QLearningAgent
 from reinforcement_learning.low_level_implementations.algorithms.agents import SarsaAgent
@@ -15,7 +15,6 @@ from reinforcement_learning.low_level_implementations.algorithms.action_selectio
 # Define environment configs
 ENVIRONMENT_CONFIGS = [
     # FrozenLakeConfig(
-    #     env_name = "FrozenLake-v1",
     #     num_trials=10,
     #     num_episodes=5000,
     #     max_steps_per_episode=100,
@@ -24,16 +23,13 @@ ENVIRONMENT_CONFIGS = [
     #     lake_size=8,
     #     is_slippery=False
     # ),
-    FrozenLakeConfig(
-        env_name="FrozenLake-v1",
-        num_trials=3,
-        num_episodes=100,
+    CliffWalkingConfig(
+        num_trials=10,
+        num_episodes=5000,
         max_steps_per_episode=100,
         render_mode="none",
-        num_checkpoints=2,
-        lake_size=4,
-        is_slippery=False
-    ),
+        num_checkpoints=10,
+    )
 ]
 
 # Define agent configs
@@ -42,26 +38,26 @@ AGENT_CONFIGS = [
         agent_type=QLearningAgent,
         learning_rate=0.1,
         discount_factor=0.9,
-        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
+        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme=None)
     ),
     AgentConfig(
         agent_type=SarsaAgent,
         learning_rate=0.1,
         discount_factor=0.9,
-        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
+        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme=None)
     ),
-    AgentConfig(
-        agent_type=DoubleQLearningAgent,
-        learning_rate=0.1,
-        discount_factor=0.9,
-        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
-    ),
-    AgentConfig(
-        agent_type=ExpectedSarsaAgent,
-        learning_rate=0.1,
-        discount_factor=0.9,
-        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
-    ),
+    # AgentConfig(
+    #     agent_type=DoubleQLearningAgent,
+    #     learning_rate=0.1,
+    #     discount_factor=0.9,
+    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
+    # ),
+    # AgentConfig(
+    #     agent_type=ExpectedSarsaAgent,
+    #     learning_rate=0.1,
+    #     discount_factor=0.9,
+    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
+    # ),
 ]
 
 # Define training configs

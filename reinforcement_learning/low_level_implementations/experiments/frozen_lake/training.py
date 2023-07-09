@@ -190,11 +190,15 @@ for config in TRAINING_CONFIGS:
                     warnings.simplefilter("ignore")
                     plot_q_table(
                         agent.q_table,
+                        action_num_to_str=config.environment_config.action_num_to_str,
                         episode_num=episode,
                         save_dir=f"{directories.q_table_plots_dir}/trial_{trial}/"
                     )
                     plot_v_table_with_arrows(
                         agent.q_table,
+                        action_num_to_str=config.environment_config.action_num_to_str,
+                        grid_rows=config.environment_config.env_rows,
+                        grid_cols=config.environment_config.env_columns,
                         episode_num=episode,
                         save_dir=f"{directories.v_table_plots_dir}/trial_{trial}/"
                     )
@@ -206,11 +210,15 @@ for config in TRAINING_CONFIGS:
             warnings.simplefilter("ignore")
             plot_q_table(
                 agent.q_table,
+                action_num_to_str=config.environment_config.action_num_to_str,
                 episode_num=num_episodes,
                 save_dir=f"{directories.q_table_plots_dir}/trial_{trial}/"
             )
             plot_v_table_with_arrows(
                 agent.q_table,
+                action_num_to_str=config.environment_config.action_num_to_str,
+                grid_rows=config.environment_config.env_rows,
+                grid_cols=config.environment_config.env_columns,
                 episode_num=num_episodes,
                 save_dir=f"{directories.v_table_plots_dir}/trial_{trial}/"
             )

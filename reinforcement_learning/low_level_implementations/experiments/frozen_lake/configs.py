@@ -7,6 +7,10 @@ import gymnasium as gym
 from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
 
+########################################################################################################################
+# Environment configs
+########################################################################################################################
+
 class EnvironmentConfig:
     def __init__(self, env_name, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints):
         self.num_trials = num_trials
@@ -15,6 +19,8 @@ class EnvironmentConfig:
         self.render_mode = render_mode   # "human", "none"
         self.num_checkpoints = num_checkpoints    # Per trial, for saving q-tables
         self.env_name = env_name
+        self.env_rows = None
+        self.env_columns = None
 
     def __call__(self):
         env = gym.make(self.env_name, render_mode=self.render_mode)
@@ -22,26 +28,61 @@ class EnvironmentConfig:
 
 
 class FrozenLakeConfig(EnvironmentConfig):
-    def __init__(self, env_name, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints,
+    def __init__(self, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints,
                  lake_size,
                  is_slippery):
-        super().__init__(env_name, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints)
+
+        super().__init__(
+            env_name=None,
+            num_trials=num_trials,
+            num_episodes=num_episodes,
+            max_steps_per_episode=max_steps_per_episode,
+            render_mode=render_mode,
+            num_checkpoints=num_checkpoints
+        )
+
+        self.env_name = "FrozenLake-v1"
+        self.action_num_to_str = {0: "left", 1: "down", 2: "right", 3: "up"}
         # Next attribute: if None, uses default 4x4 lake, else generates random lake of size LAKE_SIZE x LAKE_SIZE
         self.lake_size = lake_size
         self.is_slippery = is_slippery
+        self.env_rows = lake_size
+        self.env_columns = lake_size
 
     def __call__(self):
         if self.lake_size is None:
-            env = gym.make('FrozenLake-v1', render_mode=self.render_mode, is_slippery=self.is_slippery)
+            env = gym.make(self.env_name, render_mode=self.render_mode, is_slippery=self.is_slippery)
         else:
             env = gym.make(
-                'FrozenLake-v1',
+                self.env_name,
                 desc=generate_random_map(size=self.lake_size, p=0.8, seed=42),
                 render_mode=self.render_mode,
                 is_slippery=self.is_slippery
             )
         return env
 
+
+class CliffWalkingConfig(EnvironmentConfig):
+    def __init__(self, num_trials, num_episodes, max_steps_per_episode, render_mode, num_checkpoints):
+
+        super().__init__(
+            env_name=None,
+            num_trials=num_trials,
+            num_episodes=num_episodes,
+            max_steps_per_episode=max_steps_per_episode,
+            render_mode=render_mode,
+            num_checkpoints=num_checkpoints
+        )
+
+        self.env_name = "CliffWalking-v0"
+        self.action_num_to_str = {0: "up", 1: "right", 2: "down", 3: "left"}
+        self.env_rows = 4
+        self.env_columns = 12
+
+
+########################################################################################################################
+# Agent configs
+########################################################################################################################
 
 class AgentConfig:
     def __init__(self, agent_type, learning_rate, discount_factor, action_selector):
