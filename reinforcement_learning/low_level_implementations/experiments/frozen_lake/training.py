@@ -2,7 +2,7 @@ import gymnasium as gym
 from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 import warnings    # There's an annoying warning in matplotlib to suppress
 import os
-import pickle
+import pandas as pd
 
 from plotting import (plot_q_table, plot_training_metrics_multiple_trials, plot_v_table_with_arrows)
 
@@ -11,11 +11,7 @@ from reinforcement_learning.low_level_implementations.algorithms.agents import S
 from reinforcement_learning.low_level_implementations.algorithms.agents import ExpectedSarsaAgent
 from reinforcement_learning.low_level_implementations.algorithms.agents import DoubleQLearningAgent
 
-# from reinforcement_learning.low_level_implementations.algorithms.action_selection import EpsilonGreedySelector
-# from reinforcement_learning.low_level_implementations.algorithms.action_selection import SoftmaxSelector
-
 from metrics import (EpisodeReward, EpisodeLength, DiscountedReturn, CumulativeReward, CumulativeDiscountedReturn)
-
 from training_configs import TRAINING_CONFIGS
 
 
@@ -24,20 +20,24 @@ from training_configs import TRAINING_CONFIGS
 ########################################################################################################################
 class RunDirectories:
     def __init__(self, run_name):
+
         self.run_name = run_name
+
         self.q_table_data_dir = f"./.cache/{run_name}/data/q_table"
         self.metric_data_dir = f"./.cache/{run_name}/data/metrics"
         self.q_table_plots_dir = f"./.cache/{run_name}/plots/q_table"
         self.v_table_plots_dir = f"./.cache/{run_name}/plots/v_table"
         self.metric_plots_dir = f"./.cache/{run_name}/plots/metrics"
-        self.config_filepath_dir = f"./.cache/{run_name}/config.pkl"
+
+        self.config_filepath = f"./.cache/{run_name}/config.pkl"
+        self.runlog_filepath = f"./.cache/run_log.csv"
+
         self.create_directories()
 
     def is_directory(self, attribute_name):
         path = getattr(self, attribute_name)
         path = os.path.normpath(path)  # Normalize the path. This checks whether string is right format
         return os.path.isdir(path)
-
 
     def create_directories(self):
 
@@ -51,70 +51,59 @@ class RunDirectories:
                 os.makedirs(attribute)
 
 
+def add_metrics_to_runlog(summary_metrics_dict, directories_obj, clean_runlog=True):
+    """
+    Adds metric data from across all trials to the run log csv
+    If clean_runlog == True, will remove all rows in the runlog which don't have any run data (after merging the
+    current summary_metrics)
+    """
+    summary_metrics = pd.Series(summary_metrics_dict)
+    summary_metrics.name = run_name
+    summary_metrics = pd.DataFrame(summary_metrics).T
+    run_log = pd.read_csv(directories_obj.runlog_filepath)
+    run_log = pd.merge(run_log, summary_metrics, how="left", on="run_name")
+
+    if clean_runlog:
+        # TODO: more robust way to check which cols are metric data
+        metric_cols = ["best_" in column for column in run_log.columns]
+        metric_data = run_log.iloc[:, metric_cols]
+        no_run_data = metric_data.isna().all(axis=1)
+        run_log = run_log[~no_run_data]
+
+    run_log.to_csv(directories_obj.runlog_filepath)
+
 ########################################################################################################################
 # Run parameters
 ########################################################################################################################
 
-# # Training configuration parameters
-# config = {
-#     # Environment parameters
-#     "NUM_TRIALS": 5,
-#     "NUM_EPISODES": 10000,
-#     "MAX_STEPS_PER_EPISODE": 100,
-#     "RENDER_MODE": "none",   # "human", "none"
-#     "IS_SLIPPERY": False,
-#     "NUM_CHECKPOINTS": 10,    # Per trial, for saving q-tables
-#     "LAKE_SIZE": 8,   # If None, uses default 4x4 lake, else generates random lake of size LAKE_SIZE x LAKE_SIZE
-#     # QLearningAgent parameters
-#     "AGENT_TYPE": DoubleQLearningAgent,
-#     "LEARNING_RATE": 0.1,
-#     "DISCOUNT_FACTOR": 0.9,
-#     "ACTION_SELECTOR": EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear"),
-# }
-# save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
-# run_name = f"{config['AGENT_TYPE'].__name__}__lr_{config['LEARNING_RATE']}__df_{config['DISCOUNT_FACTOR']}__" \
-#            f"as_{config['ACTION_SELECTOR']}__episodes_{config['NUM_EPISODES']}__is_slippery_" \
-#            f"{config['IS_SLIPPERY']}__map_size_{config['LAKE_SIZE']}"
-
-
-# Training artefact directories
 
 for config in TRAINING_CONFIGS:
 
     run_name = config.run_name
-
-    NUM_EPISODES = config.environment_config.num_episodes
-    NUM_TRIALS = config.environment_config.num_trials
-
-    save_freq = NUM_EPISODES // config.environment_config.num_checkpoints
+    num_episodes = config.environment_config.num_episodes
+    num_trials = config.environment_config.num_trials
+    save_freq = num_episodes // config.environment_config.num_checkpoints
 
     # Directories object collates all directories and filepaths required for training loop
     directories = RunDirectories(run_name)
 
-
-    #
-    # # Save run configuration dictionary as pickle file
-    # with open(f"./.cache/{run_name}/config.pkl", "wb") as f:
-    #     pickle.dump(config, f)
-
     METRICS = [
-        EpisodeReward(num_episodes=NUM_EPISODES, num_trials=NUM_TRIALS),
-        EpisodeLength(num_episodes=NUM_EPISODES, num_trials=NUM_TRIALS),
-        DiscountedReturn(num_episodes=NUM_EPISODES, num_trials=NUM_TRIALS),
-        CumulativeReward(num_episodes=NUM_EPISODES, num_trials=NUM_TRIALS),
-        CumulativeDiscountedReturn(num_episodes=NUM_EPISODES, num_trials=NUM_TRIALS),
+        EpisodeReward(num_episodes=num_episodes, num_trials=num_trials),
+        EpisodeLength(num_episodes=num_episodes, num_trials=num_trials),
+        DiscountedReturn(num_episodes=num_episodes, num_trials=num_trials),
+        CumulativeReward(num_episodes=num_episodes, num_trials=num_trials),
+        CumulativeDiscountedReturn(num_episodes=num_episodes, num_trials=num_trials),
     ]
+
+    # Save run log and config pickle
+    config.update_run_log(path=directories.runlog_filepath)
+    config.pickle(path=directories.config_filepath)
 
     ####################################################################################################################
     # Training loop
     ####################################################################################################################
-    #
-    # experiment_metrics = {
-    #     metric_name: np.zeros((NUM_TRIALS, NUM_EPISODES)) for metric_name in
-    #     ["episode_total_reward", "episode_length", "episode_discounted_return_per_step"]
-    # }
 
-    for trial in range(NUM_TRIALS):
+    for trial in range(num_trials):
 
         # Instantiate the environment and agent
         if config.environment_config.lake_size is None:
@@ -141,7 +130,7 @@ for config in TRAINING_CONFIGS:
             Run {run_name}. 
             Agent: {agent}. 
             Environment: {env}
-            Trial {trial + 1} of {NUM_TRIALS} started
+            Trial {trial + 1} of {num_trials} started
             ############################################################################################################
             """
         )
@@ -150,7 +139,7 @@ for config in TRAINING_CONFIGS:
         episode_total_reward = []
         episode_length = []
         episode_discounted_return_per_step = []
-        for episode in range(NUM_EPISODES):
+        for episode in range(num_episodes):
 
             # Reset the environment
             state, info = env.reset()
@@ -189,7 +178,7 @@ for config in TRAINING_CONFIGS:
             [metric.update(episode_rewards, agent, episode=episode, trial=trial) for metric in METRICS]
 
             if episode % save_freq == 0:
-                print(f"Episode {episode} of {NUM_EPISODES} completed")
+                print(f"Episode {episode} of {num_episodes} completed")
                 # Save the Q-table to a file
                 agent.save_q_table(f"{directories.q_table_data_dir}/trial_{trial}/q_table_episode_{episode}.npy")
 
@@ -209,26 +198,27 @@ for config in TRAINING_CONFIGS:
 
         # Save final checkpoint
         agent.save_q_table(f"{directories.q_table_data_dir}/trial_{trial}/q_table_episode"
-                           f"_{NUM_EPISODES}.npy")
+                           f"_{num_episodes}.npy")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             plot_q_table(
                 agent.q_table,
-                episode_num=NUM_EPISODES,
+                episode_num=num_episodes,
                 save_dir=f"{directories.q_table_plots_dir}/trial_{trial}/"
             )
             plot_v_table_with_arrows(
                 agent.q_table,
-                episode_num=NUM_EPISODES,
+                episode_num=num_episodes,
                 save_dir=f"{directories.v_table_plots_dir}/trial_{trial}/"
             )
-
 
     # Run `finalise` on metrics - necessary for some metrics e.g. cumulative, which require post-processing after trial
     [metric.finalise() for metric in METRICS]
 
     # Save and plot performance metrics
     [metric.save(save_dir=directories.metric_data_dir) for metric in METRICS]
+
+    summary_metrics = {}
     for metric in METRICS:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -238,3 +228,6 @@ for config in TRAINING_CONFIGS:
                 save_dir=directories.metric_plots_dir,
                 show_individual_trials=True
             )
+        summary_metrics.update(metric.summarise())
+
+    add_metrics_to_runlog(summary_metrics, directories, clean_runlog=True)

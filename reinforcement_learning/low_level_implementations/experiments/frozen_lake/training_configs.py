@@ -14,13 +14,22 @@ from reinforcement_learning.low_level_implementations.algorithms.action_selectio
 
 # Define environment configs
 ENVIRONMENT_CONFIGS = [
+    # FrozenLakeConfig(
+    #     num_trials=5,
+    #     num_episodes=5000,
+    #     max_steps_per_episode=100,
+    #     render_mode="none",
+    #     num_checkpoints=10,
+    #     lake_size=8,
+    #     is_slippery=False
+    # ),
     FrozenLakeConfig(
-        num_trials=5,
-        num_episodes=5000,
+        num_trials=2,
+        num_episodes=200,
         max_steps_per_episode=100,
         render_mode="none",
         num_checkpoints=10,
-        lake_size=8,
+        lake_size=4,
         is_slippery=False
     ),
 ]
@@ -39,18 +48,18 @@ AGENT_CONFIGS = [
         discount_factor=0.9,
         action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
     ),
-    AgentConfig(
-        agent_type=DoubleQLearningAgent,
-        learning_rate=0.1,
-        discount_factor=0.9,
-        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
-    ),
-    AgentConfig(
-        agent_type=ExpectedSarsaAgent,
-        learning_rate=0.1,
-        discount_factor=0.9,
-        action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
-    ),
+    # AgentConfig(
+    #     agent_type=DoubleQLearningAgent,
+    #     learning_rate=0.1,
+    #     discount_factor=0.9,
+    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
+    # ),
+    # AgentConfig(
+    #     agent_type=ExpectedSarsaAgent,
+    #     learning_rate=0.1,
+    #     discount_factor=0.9,
+    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
+    # ),
 ]
 
 # Define training configs
@@ -62,4 +71,4 @@ for environment_config in ENVIRONMENT_CONFIGS:
             agent_config=agent_config
         )
         TRAINING_CONFIGS.append(training_config)
-        training_config.update_run_log(path="./.cache/run_log.csv")
+
