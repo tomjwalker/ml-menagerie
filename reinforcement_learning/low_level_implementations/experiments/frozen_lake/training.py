@@ -51,32 +51,37 @@ class RunDirectories:
                 os.makedirs(attribute)
 
 
-def add_metrics_to_runlog(summary_metrics_dict, directories_obj, clean_runlog=True):
+def add_metrics_to_runlog(all_metrics_dict, directories_obj, run_name, clean_runlog=True):
     """
     Adds metric data from across all trials to the run log csv
     If clean_runlog == True, will remove all rows in the runlog which don't have any run data (after merging the
     current summary_metrics)
     """
-    summary_metrics = pd.Series(summary_metrics_dict)
-    summary_metrics.name = run_name
-    summary_metrics = pd.DataFrame(summary_metrics).T
+
+    all_metrics_df = pd.DataFrame(all_metrics_dict).T
+
     run_log = pd.read_csv(directories_obj.runlog_filepath)
-    run_log = pd.merge(run_log, summary_metrics, how="left", on="run_name")
 
-    if clean_runlog:
-        # TODO: more robust way to check which cols are metric data
-        metric_cols = ["best_" in column for column in run_log.columns]
-        metric_data = run_log.iloc[:, metric_cols]
-        no_run_data = metric_data.isna().all(axis=1)
-        run_log = run_log[~no_run_data]
+    # Merge summary metrics with run log.
+    # run_log may or may not already have columns matching all_metrics_df. If it does, those columns will be overwritten
+    # with the values from all_metrics_df. If not, new columns will be added to run_log
+    run_log = pd.concat([run_log, all_metrics_df], axis=1)
 
-    run_log.to_csv(directories_obj.runlog_filepath)
+    # TODO: more robust way to check which cols are metric data
+    metric_cols = ["best_" in column for column in run_log.columns]
+
+    # if clean_runlog:
+    #     metric_data = run_log.iloc[:, metric_cols]
+    #     no_run_data = metric_data.isna().all(axis=1)
+    #     run_log = run_log[~no_run_data]
+
+    run_log.to_csv(directories_obj.runlog_filepath, index=False)
 
 ########################################################################################################################
 # Run parameters
 ########################################################################################################################
 
-
+all_config_summary_metrics = {}
 for config in TRAINING_CONFIGS:
 
     run_name = config.run_name
@@ -230,4 +235,6 @@ for config in TRAINING_CONFIGS:
             )
         summary_metrics.update(metric.summarise())
 
-    add_metrics_to_runlog(summary_metrics, directories, clean_runlog=True)
+    all_config_summary_metrics[run_name] = summary_metrics
+
+add_metrics_to_runlog(all_config_summary_metrics, directories, run_name, clean_runlog=True)
