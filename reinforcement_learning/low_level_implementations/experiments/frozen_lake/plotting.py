@@ -12,15 +12,7 @@ import pandas as pd
 # Q and V table plotting functions
 ########################################################################################################################
 
-def plot_q_table(q_table, action_num_to_str=None, episode_num=None, save_dir=None):
-
-    if action_num_to_str is None:
-        action_num_to_str = {
-            0: "up",
-            1: "right",
-            2: "down",
-            3: "left",
-        }
+def plot_q_table(q_table, action_num_to_str, episode_num=None, save_dir=None):
 
     # Create a list of action names as column labels
     actions = [action_num_to_str[i] for i in range(len(action_num_to_str))]
@@ -71,7 +63,7 @@ def plot_q_table(q_table, action_num_to_str=None, episode_num=None, save_dir=Non
         plt.savefig(save_file_path)
 
 
-def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, save_dir=None):
+def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, episode_num=None, save_dir=None):
     """
     Plots a heatmap with arrows on top of it. The heatmap is a square grid of values, and the arrows are placed in the
     center of each grid cell. The arrows are colored according to the value of the grid cell they are in.
@@ -79,45 +71,30 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
         array: an agent's Q-table
         action_num_to_str: maps Q-table row indices to action strings
             - Frozen Lake: {0: "Left", 1: "Down", 2: "Right", 3: "Up"}
+            - Cliff Walking: {0: "up", 1: "right", 2: "down", 3: "left"}
+        grid_rows: the number of rows in the gridworld
+        grid_cols: the number of columns in the gridworld
         episode_num: the episode number
         save_dir: the directory to save the plot in
 
     Returns:
-
     """
 
-    if action_num_to_str is None:
-        action_num_to_str = {
-            0: "up",
-            1: "right",
-            2: "down",
-            3: "left",
-        }
-
-    # QLearningAgent's Q table is of shape (num_states, num_actions) whereas this function requires (num_actions, num_states)
+    # QLearningAgent's Q table is of shape (num_states, num_actions) whereas this function requires
+    # (num_actions, num_states)
     array = array.T
-
-    # Check if the input array has a square shape
-    if array.shape[1] != int(np.sqrt(array.shape[1]))**2:
-        raise ValueError("Input array dimensions are not square.")
 
     # Create a reverse mapping dictionary to get action numbers from strings
     str_to_action_num = {v: k for k, v in action_num_to_str.items()}
-
-    # Calculate the number of rows and columns in the square heatmap
-    n_rows = n_cols = int(np.sqrt(array.shape[1]))
-
-    # Recreate the square space
-    space = np.zeros((n_rows, n_cols))
 
     # Find the maximum value per column
     max_columns = np.max(array, axis=0)
 
     # Reshape the max_columns to match the square space
-    space_values = max_columns.reshape((n_rows, n_cols))
+    space_values = max_columns.reshape((grid_rows, grid_cols))
 
     # Create a meshgrid for the coordinates of the grid cells
-    x, y = np.meshgrid(range(n_cols), range(n_rows))
+    x, y = np.meshgrid(range(grid_cols), range(grid_rows))
 
     # Plot the heatmap with 'plasma' colormap
     plt.figure(figsize=(6, 4))
@@ -129,6 +106,7 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
 
     # Calculate and plot the arrows for each element
     for i in range(array.shape[1]):
+
         # Calculate the vector components using action strings
         up_value = array[str_to_action_num["up"], i]
         right_value = array[str_to_action_num["right"], i]
@@ -149,7 +127,8 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
 
         # Calculate the arrow colors based on the background color
         arrow_colors = ['black', 'black', 'black', 'black']
-        if space_values[y_center, x_center] < 0.5:
+        value_mags = np.abs(space_values)
+        if value_mags[y_center, x_center] < np.max(value_mags) / 2:
             arrow_colors = ['white', 'white', 'white', 'white']
 
         # Calculate the half length of the arrow
@@ -180,8 +159,8 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
         )
 
     # Set the tick labels for the x and y axes
-    plt.xticks(range(n_cols), range(n_cols))
-    plt.yticks(range(n_rows), range(n_rows))
+    plt.xticks(range(grid_cols), range(grid_cols))
+    plt.yticks(range(grid_rows), range(grid_rows))
 
     # Set title
     if episode_num is not None:
@@ -198,7 +177,6 @@ def plot_v_table_with_arrows(array, action_num_to_str=None, episode_num=None, sa
         save_dir_path.mkdir(parents=True, exist_ok=True)
         save_file_path = save_dir_path / f"v_table_episode_{episode_num}.png"
         plt.savefig(save_file_path)
-
 
 
 ########################################################################################################################
