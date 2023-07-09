@@ -108,12 +108,12 @@ if MAKE_VIDEOS:
         best_trial = np.argmax(cum_return_all_trials[:, -1])
 
         # Get mid-training Q-table
-        save_freq = config["NUM_EPISODES"] // config["NUM_CHECKPOINTS"]
+        save_freq = config["num_episodes"] // config["NUM_CHECKPOINTS"]
         mid_training_episode = save_freq * (config["NUM_CHECKPOINTS"] // 2)    # Done this way as checkpoints were worked
         # out with "//" operator, which returns an integer
         mid_training_episode = int(mid_training_episode)
 
-        for training_episode in [0, mid_training_episode, config["NUM_EPISODES"]]:
+        for training_episode in [0, mid_training_episode, config["num_episodes"]]:
 
             # Load environment (most immediately useful for defining the state and action space for instantiating the agent)
             if config.get("LAKE_SIZE") is not None:

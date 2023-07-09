@@ -96,5 +96,3 @@ class TrainingConfig:
         else:
             run_log = config_df
         run_log.to_csv(path, index=False)
-
-        return run_name

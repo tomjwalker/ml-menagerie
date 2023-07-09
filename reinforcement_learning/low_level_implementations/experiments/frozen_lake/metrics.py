@@ -56,6 +56,21 @@ class RLMetric:
         with open(save_path, "wb") as f:
             pickle.dump(self, f)
 
+    def summarise(self):
+
+        mean_across_trials = self.values.mean(axis=0)
+        best_score_across_trials = mean_across_trials.max()
+        # For argmax, pick last rather than first if ties, assuming variance will decrease (e.g. reducing epsilon)
+        best_episode = np.where(mean_across_trials == best_score_across_trials)[0][-1]
+        standard_deviation = self.values.std(axis=0)[best_episode]
+
+        metrics = {
+            f"best_avg_{self.save_name}": best_score_across_trials,
+            f"best_std_{self.save_name}": standard_deviation,
+        }
+
+        return metrics
+
 
 class EpisodeReward(RLMetric):
     """
