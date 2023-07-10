@@ -1,4 +1,4 @@
-from plotting import plot_training_metrics_single_trial, plot_training_metrics_multiple_trials
+from plotting import plot_training_metrics_multiple_trials
 import numpy as np
 import pickle
 from enum import Enum
@@ -6,10 +6,7 @@ import os
 from collections import defaultdict
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
-from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
-from reinforcement_learning.low_level_implementations.algorithms.agents import QLearningAgent
-from reinforcement_learning.low_level_implementations.algorithms.action_selection import EpsilonGreedySelector
 
 # =============================================================================
 # Evaluation settings
@@ -17,44 +14,28 @@ from reinforcement_learning.low_level_implementations.algorithms.action_selectio
 
 EVAL_NAME = "agent_sweep"
 
-# # Specify runs to inspect
-# RUN_DIRECTORIES = {
-#     "learning_rate_0.1": ".cache/tabular_q_learning__lr_0.1__df_0.9__as_EpsilonGreedySelector"
-#                          "__epsilon_0_1_decay_scheme_None__episodes_2000__is_slippery_False__map_size_8",
-#     "learning_rate_0.1_eg_linear_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
-#                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_linear__episodes_2000"
-#                                          "__is_slippery_False__map_size_8",
-#     "learning_rate_0.1_eg_exponential_decay": ".cache/tabular_q_learning__lr_0.1__df_0.9"
-#                                          "__as_EpsilonGreedySelector__epsilon_0_1_decay_scheme_exponential__episodes"
-#                                               "_2000__is_slippery_False__map_size_8",
-# }
-
 # Specify runs to inspect
 RUN_DIRECTORIES = {
-    "qlearning_eg_linear_decay": ".cache/QLearningAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
-                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
-    "double_qlearning_eg_linear_decay": ".cache/DoubleQLearningAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
-                                 "epsilon_0_1_decay_scheme_linear__episodes_10000__is_slippery_False__map_size_8",
-    "sarsa_eg_linear_decay": ".cache/SarsaAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
-                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
-    "expected_sarsa_eg_linear_decay": ".cache/ExpectedSarsaAgent__lr_0.1__df_0.9__as_EpsilonGreedySelector__"
-                                 "epsilon_0_1_decay_scheme_linear__episodes_2000__is_slippery_False__map_size_8",
-
+    "qlearning_eg_linear_decay": ".cache/75018857-047a-4e6e-ac43-07cf531b8fce",
+    # "double_qlearning_eg_linear_decay": ".cache/408d271e-6f81-4f43-a31b-9123dbcd1ef0",
+    "sarsa_eg_linear_decay": ".cache/eb7c8cb6-4b0f-451b-ac41-0dfe7bab1482",
+    "expected_sarsa_eg_linear_decay": ".cache/3b040326-06e5-470e-9591-b724d7beb19c",
 }
-
 
 METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
 }
 
-X_LIMIT = 10000    # None for no limit
+X_LIMIT = None    # None for no limit
 
-MAKE_VIDEOS = False
+MAKE_VIDEOS = True
+
+mid_training_episode = None    # If None, calculates mid-point intermediate episode
 
 
 class EvalDirectories(Enum):
-    PLOTS = f"./.cache/evaluations/plots/{EVAL_NAME}"
-    VIDEOS = f"./.cache/evaluations/videos"
+    PLOTS = f"./.cache/evaluations/{EVAL_NAME}/plots"
+    VIDEOS = f"./.cache/evaluations/{EVAL_NAME}/videos"
 
 
 for directory in EvalDirectories:
@@ -103,40 +84,35 @@ if MAKE_VIDEOS:
     # For each config, get multi-episode videos of behaviour at the start, middle, and end of training
     for run_name, config in configs.items():
 
-        # Get best performing run from the trial with the maximum accumulated discounted reward
+        # Get a typical performing run from the trial with the median accumulated discounted reward
         cum_return_all_trials = metrics["cumulative_discounted_return"][run_name]
-        best_trial = np.argmax(cum_return_all_trials[:, -1])
+        final_scores = cum_return_all_trials[:, -1]
+        median_trial = np.argmin(np.abs(final_scores - np.median(final_scores)))
 
-        # Get mid-training Q-table
-        save_freq = config["num_episodes"] // config["NUM_CHECKPOINTS"]
-        mid_training_episode = save_freq * (config["NUM_CHECKPOINTS"] // 2)    # Done this way as checkpoints were worked
-        # out with "//" operator, which returns an integer
-        mid_training_episode = int(mid_training_episode)
+        # Get mid-training episode, if not provided
+        if mid_training_episode is None:
+            save_freq = config.environment_config.num_episodes // config.environment_config.num_checkpoints
+            mid_training_episode = save_freq * (config.environment_config.num_checkpoints // 2)
+            # out with "//" operator, which returns an integer
+            mid_training_episode = int(mid_training_episode)
 
-        for training_episode in [0, mid_training_episode, config["num_episodes"]]:
+        for training_episode in [0, mid_training_episode, config.environment_config.num_episodes]:
 
-            # Load environment (most immediately useful for defining the state and action space for instantiating the agent)
-            if config.get("LAKE_SIZE") is not None:
-                env = gym.make(
-                    'FrozenLake-v1',
-                    desc=generate_random_map(size=config["LAKE_SIZE"], p=0.8, seed=42),
-                    render_mode="rgb_array_list",
-                    is_slippery=config['IS_SLIPPERY']
-                )
-            else:
-                env = gym.make('FrozenLake-v1', render_mode="rgb_array_list", is_slippery=config['IS_SLIPPERY'])
+            # Load environment (most immediately useful for defining the state and action space for instantiating
+            # the agent)
+            config.environment_config.render_mode = "rgb_array"
+            env = config.environment_config()
 
-            # TODO: Load agent and render activity at stages of training loop
-            agent = QLearningAgent(
+            agent = config.agent_config.agent_type(
+                gamma=config.agent_config.discount_factor,
+                alpha=config.agent_config.learning_rate,
+                action_selector=config.agent_config.action_selector,
                 num_states=env.observation_space.n,
-                num_actions=env.action_space.n,
-                action_selector=config['ACTION_SELECTOR'],
-                gamma=config['DISCOUNT_FACTOR'],
-                alpha=config['LEARNING_RATE'],
+                num_actions=env.action_space.n
             )
 
             # Load Q-table
-            q_table = np.load(f"{RUN_DIRECTORIES[run_name]}/data/q_table/trial_{best_trial}/q_table_episode"
+            q_table = np.load(f"{RUN_DIRECTORIES[run_name]}/data/q_table/trial_{median_trial}/q_table_episode"
                               f"_{training_episode}.npy")
             agent.q_table = q_table
 
@@ -151,7 +127,8 @@ if MAKE_VIDEOS:
                     action = agent.choose_action(state, episode)
                     state, reward, terminated, truncated, info = env.step(action)
                 frames = env.render()
-                episode_samples.extend(frames)
+                # episode_samples.extend(frames)
+                episode_samples.append(frames)
 
             save_video(
                 frames=episode_samples,
