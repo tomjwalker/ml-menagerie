@@ -23,6 +23,8 @@ Implementations of common reinforcement learning algorithms
 The above plots show learning curves for Q-Learning, SARSA and Expected SARSA for an 8x8 Frozen Lake environment (random seed 42), averaged over 10 trials. 
 The fill area represents 95% confidence interval over the trials.
 
+All agents had an epsilon-greedy policy which decayed epsilon over the trial period.
+
 Q-learning and Expected SARSA perform similarly, with SARSA performing less well. 
 
 Double Q-learning was implemented too, and proved slow to learn (see below, vs (single) Q-learning).
