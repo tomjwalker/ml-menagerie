@@ -16,6 +16,7 @@ Implementations of common reinforcement learning algorithms
 
 ### 1.2. Behaviour Policies
 | Implemented | Policy | Motivation |
+|---|---|---|
 | ✓ | Epsilon-Greedy // no decay | Simplest |
 | ✓ | Epsilon-Greedy // linear decay | Exploit, once good value function learnt |
 | ✓ | Epsilon-Greedy // exponential decay |  |
@@ -25,6 +26,7 @@ Implementations of common reinforcement learning algorithms
 
 ### 1.3. Environments
 | Implemented | Environment Name | Motivation |
+|---|---|---|
 | ✓ | Frozen Lake default (4x4) | One of the simplest Gymnasium environment |
 | ✓ | Frozen Lake custom (8x8, random seed 42) | Get a feel for reward sparsity and its effect on training for larger environments |
 | ✓ | Cliff Walker | Demonstrate SARSA's more cautious value function, as Sutton & Barto pp. 132 |
