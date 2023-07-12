@@ -11,3 +11,5 @@ Implementations of common reinforcement learning algorithms
 | | Monte Carlo         | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( G_t - Q(s, a) \right)$                                       |
 | | TD(Lambda)          | $z(s, a) \leftarrow \gamma \lambda z(s, a) + \nabla Q(s, a)$ <br> $\delta \leftarrow r + \gamma Q(s', a') - Q(s, a)$ <br> $w \leftarrow w + \alpha \delta z(s, a)$|
 | | Dyna                | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)$ <br> $r, s' \leftarrow Model(s, a)$              |
+
+## 2. Frozen Lake
