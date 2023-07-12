@@ -1,7 +1,9 @@
 # rl-menagerie
 Implementations of common reinforcement learning algorithms
 
-## 1. Algorithms
+## 1. Summary
+
+### 1.1. Agents
 | Implemented | Algorithm Name      | Update Equation                                                                                           |
 |---------|---------------------|-----------------------------------------------------------------------------------------------------------|
 | ✓ | Q Learning          | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)$               |
@@ -11,6 +13,23 @@ Implementations of common reinforcement learning algorithms
 | | Monte Carlo         | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( G_t - Q(s, a) \right)$                                       |
 | | TD(Lambda)          | $z(s, a) \leftarrow \gamma \lambda z(s, a) + \nabla Q(s, a)$ <br> $\delta \leftarrow r + \gamma Q(s', a') - Q(s, a)$ <br> $w \leftarrow w + \alpha \delta z(s, a)$|
 | | Dyna                | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)$ <br> $r, s' \leftarrow Model(s, a)$              |
+
+### 1.2. Behaviour Policies
+| Implemented | Policy | Motivation |
+| ✓ | Epsilon-Greedy // no decay | Simplest |
+| ✓ | Epsilon-Greedy // linear decay | Exploit, once good value function learnt |
+| ✓ | Epsilon-Greedy // exponential decay |  |
+| ✓ | Softmax | Potentially less information loss on Q-function; sensitive to tao temperature param |
+|  | Mellowmax |  |
+|  | Soft mellowmax |  |
+
+### 1.3. Environments
+| Implemented | Environment Name | Motivation |
+| ✓ | Frozen Lake default (4x4) | One of the simplest Gymnasium environment |
+| ✓ | Frozen Lake custom (8x8, random seed 42) | Get a feel for reward sparsity and its effect on training for larger environments |
+| ✓ | Cliff Walker | Demonstrate SARSA's more cautious value function, as Sutton & Barto pp. 132 |
+| | Taxi | More complex action space |
+| | Blackjack| More complex MDP |
 
 ## 2. Frozen Lake
 
