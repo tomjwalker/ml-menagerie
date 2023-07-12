@@ -25,7 +25,7 @@ The fill area represents 95% confidence interval over the trials.
 
 All agents had an epsilon-greedy policy which decayed epsilon over the trial period.
 
-Q-learning and Expected SARSA perform similarly, with SARSA performing less well. 
+Q-learning and Expected SARSA perform similarly, with SARSA taking a little longer to learn. 
 
 Double Q-learning was implemented too, and proved slow to learn (see below, vs (single) Q-learning).
 Double Q-learning addresses the "maximisation bias" error, the motivation for which is clearly stated with the two-state MDP in Sutton & Barto 135: moving right terminates with 0 reward, moving left generates 0 reward then leads to a termination with normally distributed reward (mean -0.1, variance 1) and termination. Moving right is the correct action, but simple Q learners will initially prefer left.
