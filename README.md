@@ -13,3 +13,4 @@ Implementations of common reinforcement learning algorithms
 | | Dyna                | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)$ <br> $r, s' \leftarrow Model(s, a)$              |
 
 ## 2. Frozen Lake
+![desc](./reinforcement_learning/media/
