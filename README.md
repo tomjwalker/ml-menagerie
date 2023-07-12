@@ -13,4 +13,7 @@ Implementations of common reinforcement learning algorithms
 | | Dyna                | $Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)$ <br> $r, s' \leftarrow Model(s, a)$              |
 
 ## 2. Frozen Lake
-![desc](./reinforcement_learning/media/frozen_lake_discounted_return_per_episode.png)
+
+### 2.1. Agent sweep
+![Discounted return per episode. Averaged over 10 trials; fill shows 95% confidence interval](./reinforcement_learning/media/frozen_lake_discounted_return_per_episode.png)
+![Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval](./reinforcement_learning/media/frozen_lake_cumulative_reward_per_episode.png)
