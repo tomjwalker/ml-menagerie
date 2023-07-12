@@ -16,8 +16,8 @@ Implementations of common reinforcement learning algorithms
 
 ### 2.1. Agent sweep
 <div>
-    <img src="./reinforcement_learning/media/frozen_lake_discounted_return_per_episode.png" alt="Discounted return per episode. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left; margin-right: 10px;" width="500" />
-    <img src="./reinforcement_learning/media/frozen_lake_cumulative_reward_per_episode.png" alt="Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left;" width="500" />
+    <img src="./reinforcement_learning/media/frozen_lake_discounted_return_per_episode.png" alt="Discounted return per episode. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left; margin-right: 10px;" width="400" />
+    <img src="./reinforcement_learning/media/frozen_lake_cumulative_reward_per_episode.png" alt="Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left;" width="400" />
 </div>
 
 The above plots show learning curves for Q-Learning, SARSA and Expected SARSA for an 8x8 Frozen Lake environment (random seed 42), averaged over 10 trials. 
@@ -30,5 +30,9 @@ Q-learning and Expected SARSA perform similarly, with SARSA taking a little long
 Double Q-learning was implemented too, and proved slow to learn (see below, vs (single) Q-learning).
 Double Q-learning addresses the "maximisation bias" error, the motivation for which is clearly stated with the two-state MDP in Sutton & Barto 135: moving right terminates with 0 reward, moving left generates 0 reward then leads to a termination with normally distributed reward (mean -0.1, variance 1) and termination. Moving right is the correct action, but simple Q learners will initially prefer left.
 
-Double Q-learning updates its 2 Q tables at half-frequency with a coin flip, although I can't find many descriptions on the web for it being a slow learner. A TODO is to check my implementation is correct here.
+Double Q-learning updates its 2 Q tables at half-frequency with a coin flip, although I can't find many descriptions on the web for it being a slow learner. A TODO is to check my implementation is correct here. It could also be an interaction with the linear epsilon decay scheme, decaying too fast before exploration complete.
+
+<div>
+    <img src="./reinforcement_learning/media/q_vs_double_q.png" alt="Q vs double Q" style="float: left; margin-right: 10px;" width="400" />
+</div>
 
