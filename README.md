@@ -44,5 +44,5 @@ As with Sutton & Barto, here I did not decay epsilon in the epsilon-greedy actio
 
 <div>
     <img src="./reinforcement_learning/media/cliff_walker_discounted_return_per_episode.png" alt="Discounted return per episode. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left; margin-right: 10px;" width="400" />
-    <img src="./reinforcement_learning/media/cliff_walker_cumulative_reward_per_episode.png" alt="Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left;" width="400" />
+    <img src="./reinforcement_learning/media/cliff_walker_cumulative_discounted_return_per_episode.png" alt="Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left;" width="400" />
 </div>
