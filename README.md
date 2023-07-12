@@ -19,10 +19,10 @@ Implementations of common reinforcement learning algorithms
 |---|---|---|
 | ✓ | Epsilon-Greedy // no decay | Simplest |
 | ✓ | Epsilon-Greedy // linear decay | Exploit, once good value function learnt |
-| ✓ | Epsilon-Greedy // exponential decay |  |
-| ✓ | Softmax | Potentially less information loss on Q-function; sensitive to tao temperature param |
-|  | Mellowmax |  |
-|  | Soft mellowmax |  |
+| ✓ | Epsilon-Greedy // exponential decay | Potentially more efficient decay schedule: quicker decay during steep early learning curve |
+| ✓ | Softmax | Less information loss applied to Q-function; sensitive to temperature parameter. Differentiable if used for target policy |
+|  | Mellowmax | Differentiable, allows convergent behaviour in learning and planning |
+|  | Soft mellowmax | Adresses oversmoothing problem of mellowmax |
 
 ### 1.3. Environments
 | Implemented | Environment Name | Motivation |
