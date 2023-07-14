@@ -27,7 +27,7 @@ Implementations of common reinforcement learning algorithms
 ### 1.3. Environments
 | Implemented | Environment Name | Motivation |
 |---|---|---|
-| ✓ | Frozen Lake default (4x4) | One of the simplest Gymnasium environment |
+| ✓ | Frozen Lake default (4x4) | One of the simplest Gymnasium environments |
 | ✓ | Frozen Lake custom (8x8, random seed 42) | Get a feel for reward sparsity and its effect on training for larger environments |
 | ✓ | Cliff Walker | Demonstrate SARSA's more cautious value function, as Sutton & Barto pp. 132 |
 | | Taxi | More complex action space |
@@ -61,7 +61,7 @@ Double Q-learning updates its 2 Q tables at half-frequency with a coin flip, alt
 
 This environment is introduced in pp. 1323 of Sutton & Barto, the motivation being to demonstrate SARSA taking a safer path (due to waiting for next action A' before updating the value function) than Q learning.
 
-As with Sutton & Barto, here I did not decay epsilon in the epsilon-greedy action selection schedule. Q learning thus performs worse, as it takes the optimal path close to the cliff edge, which pays off the majority of the time (-13 reward, vs -17 for the safer path), but every so often the agent goes **stochastic lemming**.
+As with Sutton & Barto, here I did not decay epsilon in the epsilon-greedy action selection schedule. Q learning thus performs worse, as it takes the optimal path close to the cliff edge, which pays off the majority of the time (-13 reward, vs -17 for the safer path), but every so often the agent goes **stochastic lemming** for a -100 payoff.
 
 <div>
     <img src="./reinforcement_learning/media/cliff_walker_discounted_return_per_episode.png" alt="Discounted return per episode. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left; margin-right: 10px;" width="400" />
