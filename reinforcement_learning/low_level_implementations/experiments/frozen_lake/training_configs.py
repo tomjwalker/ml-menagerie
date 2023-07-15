@@ -34,30 +34,30 @@ ENVIRONMENT_CONFIGS = [
 
 # Define agent configs
 AGENT_CONFIGS = [
+    # AgentConfig(
+    #     agent_type=QLearningAgent,
+    #     learning_rate=0.1,
+    #     discount_factor=0.9,
+    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme=None)
+    # ),
+    # AgentConfig(
+    #     agent_type=SarsaAgent,
+    #     learning_rate=0.1,
+    #     discount_factor=0.9,
+    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme=None)
+    # ),
     AgentConfig(
-        agent_type=QLearningAgent,
+        agent_type=DoubleQLearningAgent,
         learning_rate=0.1,
         discount_factor=0.9,
         action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme=None)
     ),
     AgentConfig(
-        agent_type=SarsaAgent,
+        agent_type=ExpectedSarsaAgent,
         learning_rate=0.1,
         discount_factor=0.9,
         action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme=None)
     ),
-    # AgentConfig(
-    #     agent_type=DoubleQLearningAgent,
-    #     learning_rate=0.1,
-    #     discount_factor=0.9,
-    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
-    # ),
-    # AgentConfig(
-    #     agent_type=ExpectedSarsaAgent,
-    #     learning_rate=0.1,
-    #     discount_factor=0.9,
-    #     action_selector=EpsilonGreedySelector(epsilon=0.1, decay_scheme="linear")
-    # ),
 ]
 
 # Define training configs

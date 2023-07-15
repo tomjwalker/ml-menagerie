@@ -12,23 +12,21 @@ from gymnasium.utils.save_video import save_video
 # Evaluation settings
 # =============================================================================
 
-EVAL_NAME = "agent_sweep"
+EVAL_NAME = "cliff_walker"
 
 # Specify runs to inspect
 RUN_DIRECTORIES = {
-    "qlearning_eg_linear_decay": ".cache/75018857-047a-4e6e-ac43-07cf531b8fce",
-    # "double_qlearning_eg_linear_decay": ".cache/408d271e-6f81-4f43-a31b-9123dbcd1ef0",
-    "sarsa_eg_linear_decay": ".cache/eb7c8cb6-4b0f-451b-ac41-0dfe7bab1482",
-    "expected_sarsa_eg_linear_decay": ".cache/3b040326-06e5-470e-9591-b724d7beb19c",
+    "qlearning_eg_0_1": ".cache/6873c2c5-07b5-4f85-a71d-a37dedfcc7df",
+    "sarsa_eg_0_1": ".cache/beec2c12-8ec0-4319-9db5-57b353d838bf",
 }
 
 METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
 }
 
-X_LIMIT = None    # None for no limit
+X_LIMIT = 500    # None for no limit
 
-MAKE_VIDEOS = True
+MAKE_VIDEOS = False
 
 mid_training_episode = None    # If None, calculates mid-point intermediate episode
 
@@ -123,12 +121,15 @@ if MAKE_VIDEOS:
                 state, info = env.reset()
                 terminated = False
                 truncated = False
-                while not (terminated or truncated):
+                steps = 0
+                while (not (terminated or truncated)) and steps < config.environment_config.max_steps_per_episode:
                     action = agent.choose_action(state, episode)
                     state, reward, terminated, truncated, info = env.step(action)
+                    steps += 1
                 frames = env.render()
                 # episode_samples.extend(frames)
                 episode_samples.append(frames)
+
 
             save_video(
                 frames=episode_samples,
