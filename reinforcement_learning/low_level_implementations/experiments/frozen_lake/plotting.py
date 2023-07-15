@@ -87,11 +87,19 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
     # Create a reverse mapping dictionary to get action numbers from strings
     str_to_action_num = {v: k for k, v in action_num_to_str.items()}
 
-    # Find the maximum value per column
-    max_columns = np.max(array, axis=0)
+    # Store states where all action vals are 0 (typically represent terminal states / zero-initialised states)
+    mask_all_zero_actions = (array == 0).all(axis=0)
 
-    # Reshape the max_columns to match the square space
-    space_values = max_columns.reshape((grid_rows, grid_cols))
+    # Then shift array so no negatives (environments which return only negative rewards can lead to all negative
+    # Q-tables)
+    array = array - array.min()
+
+    # Find the maximum action value per column (state)
+    max_action_val = np.max(array, axis=0)
+
+    # Reshape the max_action_val to match the gridworld space
+    space_values = max_action_val.reshape((grid_rows, grid_cols))
+    mask_all_zero_actions = mask_all_zero_actions.reshape((grid_rows, grid_cols))
 
     # Create a meshgrid for the coordinates of the grid cells
     x, y = np.meshgrid(range(grid_cols), range(grid_rows))
@@ -99,7 +107,12 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
     # Plot the heatmap with 'plasma' colormap
     plt.figure(figsize=(6, 4))
     heatmap = plt.imshow(space_values, cmap='plasma', interpolation='nearest')
-    plt.colorbar(heatmap)
+
+    # Apply mask
+    cmap_mask = plt.cm.colors.ListedColormap(["none", "black"])
+    plt.imshow(mask_all_zero_actions, cmap=cmap_mask, interpolation='nearest')
+
+    plt.colorbar(heatmap, orientation="horizontal")
 
     # Calculate the maximum magnitude for scaling the arrows
     max_magnitude = np.max(np.abs(array))
@@ -108,54 +121,52 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
     for i in range(array.shape[1]):
 
         # Calculate the vector components using action strings
-        up_value = array[str_to_action_num["up"], i]
-        right_value = array[str_to_action_num["right"], i]
-        down_value = array[str_to_action_num["down"], i]
-        left_value = array[str_to_action_num["left"], i]
+        up_value = np.abs(array[str_to_action_num["up"], i])
+        right_value = np.abs(array[str_to_action_num["right"], i])
+        down_value = np.abs(array[str_to_action_num["down"], i])
+        left_value = np.abs(array[str_to_action_num["left"], i])
 
-        # Scale the values to the range [0, 1]
-        total_sum = up_value + right_value + down_value + left_value
-        if total_sum > 0:
-            up_value /= total_sum
-            right_value /= total_sum
-            down_value /= total_sum
-            left_value /= total_sum
+        # Scale all action arrows across all states by the maximum magnitude
+        up_value /= max_magnitude
+        right_value /= max_magnitude
+        down_value /= max_magnitude
+        left_value /= max_magnitude
 
         # Calculate the center coordinates of the grid cell
         x_center = x.flatten()[i]
         y_center = y.flatten()[i]
 
         # Calculate the arrow colors based on the background color
-        arrow_colors = ['black', 'black', 'black', 'black']
+        arrow_color = 'black'
         value_mags = np.abs(space_values)
-        if value_mags[y_center, x_center] < np.max(value_mags) / 2:
-            arrow_colors = ['white', 'white', 'white', 'white']
+        if value_mags[y_center, x_center] < np.max(np.abs(value_mags)) / 2:
+            arrow_color = 'white'
 
-        # Calculate the half length of the arrow
-        arrow_length = 0.15
-        arrow_half_length = arrow_length / 2
-        head_width = arrow_length * 0.75
+        # Calculate the half-length of the arrow
+        arrow_length = 0.35
+        head_length = arrow_length * 0.33
+        head_width = arrow_length * 0.2
 
         # Plot the arrows centered in the grid cell
         plt.arrow(
             x_center, y_center,
             0, up_value * arrow_length,
-            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[0], ec=arrow_colors[0]
+            head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
         plt.arrow(
             x_center, y_center,
             right_value * arrow_length, 0,
-            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[1], ec=arrow_colors[1]
+            head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
         plt.arrow(
             x_center, y_center,
             0, -down_value * arrow_length,
-            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[2], ec=arrow_colors[2]
+            head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
         plt.arrow(
             x_center, y_center,
             -left_value * arrow_length, 0,
-            head_width=head_width, head_length=arrow_half_length, fc=arrow_colors[3], ec=arrow_colors[3]
+            head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
 
     # Set the tick labels for the x and y axes
