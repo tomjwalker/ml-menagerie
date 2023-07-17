@@ -106,16 +106,7 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
 
     # Plot the heatmap with 'plasma' colormap
     plt.figure(figsize=(6, 4))
-    heatmap = plt.imshow(space_values, cmap='plasma', interpolation='nearest')
-
-    # Apply mask
-    cmap_mask = plt.cm.colors.ListedColormap(["none", "black"])
-    plt.imshow(mask_all_zero_actions, cmap=cmap_mask, interpolation='nearest')
-
-    plt.colorbar(heatmap, orientation="horizontal")
-
-    # Calculate the maximum magnitude for scaling the arrows
-    max_magnitude = np.max(np.abs(array))
+    plt.imshow(space_values, cmap='plasma', interpolation='nearest')
 
     # Calculate and plot the arrows for each element
     for i in range(array.shape[1]):
@@ -126,11 +117,16 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
         down_value = np.abs(array[str_to_action_num["down"], i])
         left_value = np.abs(array[str_to_action_num["left"], i])
 
-        # Scale all action arrows across all states by the maximum magnitude
-        up_value /= max_magnitude
-        right_value /= max_magnitude
-        down_value /= max_magnitude
-        left_value /= max_magnitude
+        # Scale arrows within grid to show relative values
+        max_action_val = np.max([up_value, right_value, down_value, left_value])
+        min_action_val = np.min([up_value, right_value, down_value, left_value])
+        action_range = max_action_val - min_action_val
+        if action_range == 0:
+            action_range = 1
+        up_value = (up_value - min_action_val) / action_range
+        right_value = (right_value - min_action_val) / action_range
+        down_value = (down_value - min_action_val) / action_range
+        left_value = (left_value - min_action_val) / action_range
 
         # Calculate the center coordinates of the grid cell
         x_center = x.flatten()[i]
@@ -139,8 +135,9 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
         # Calculate the arrow colors based on the background color
         arrow_color = 'black'
         value_mags = np.abs(space_values)
-        if value_mags[y_center, x_center] < np.max(np.abs(value_mags)) / 2:
-            arrow_color = 'white'
+        if value_mags[y_center, x_center] < np.mean(np.abs(value_mags)):
+            if ~mask_all_zero_actions[y_center, x_center]:
+                arrow_color = 'white'
 
         # Calculate the half-length of the arrow
         arrow_length = 0.35
@@ -150,7 +147,7 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
         # Plot the arrows centered in the grid cell
         plt.arrow(
             x_center, y_center,
-            0, up_value * arrow_length,
+            0, -up_value * arrow_length,
             head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
         plt.arrow(
@@ -160,7 +157,7 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
         )
         plt.arrow(
             x_center, y_center,
-            0, -down_value * arrow_length,
+            0, down_value * arrow_length,
             head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
         plt.arrow(
@@ -168,6 +165,10 @@ def plot_v_table_with_arrows(array, action_num_to_str, grid_rows, grid_cols, epi
             -left_value * arrow_length, 0,
             head_width=head_width, head_length=head_length, fc=arrow_color, ec=arrow_color
         )
+
+    # Apply mask
+    cmap_mask = plt.cm.colors.ListedColormap(["none", "black"])
+    plt.imshow(mask_all_zero_actions, cmap=cmap_mask, interpolation='nearest')
 
     # Set the tick labels for the x and y axes
     plt.xticks(range(grid_cols), range(grid_cols))
