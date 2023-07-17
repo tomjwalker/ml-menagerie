@@ -26,9 +26,9 @@ METRICS_DIRECTORIES = {
 
 X_LIMIT = 500    # None for no limit
 
-MAKE_VIDEOS = False
+MAKE_VIDEOS = True
 
-mid_training_episode = None    # If None, calculates mid-point intermediate episode
+mid_training_episode = 600    # If None, calculates mid-point intermediate episode
 
 
 class EvalDirectories(Enum):
@@ -93,12 +93,17 @@ if MAKE_VIDEOS:
             mid_training_episode = save_freq * (config.environment_config.num_checkpoints // 2)
             # out with "//" operator, which returns an integer
             mid_training_episode = int(mid_training_episode)
+        else:
+            # Find closest episode to the provided mid-training episode
+            save_freq = config.environment_config.num_episodes // config.environment_config.num_checkpoints
+            mid_training_episode = save_freq * (mid_training_episode // save_freq)
+            mid_training_episode = int(mid_training_episode)
 
         for training_episode in [0, mid_training_episode, config.environment_config.num_episodes]:
 
             # Load environment (most immediately useful for defining the state and action space for instantiating
             # the agent)
-            config.environment_config.render_mode = "rgb_array"
+            config.environment_config.render_mode = "rgb_array_list"
             env = config.environment_config()
 
             agent = config.agent_config.agent_type(
@@ -114,7 +119,7 @@ if MAKE_VIDEOS:
                               f"_{training_episode}.npy")
             agent.q_table = q_table
 
-            # Want to record a video of 10 episodes of the agent's activity, at this stage of training
+            # Want to record a video of 50 episodes of the agent's activity, at this stage of training
             episode_samples = []
             for episode in range(50):
                 # Render activity
@@ -127,12 +132,10 @@ if MAKE_VIDEOS:
                     state, reward, terminated, truncated, info = env.step(action)
                     steps += 1
                 frames = env.render()
-                # episode_samples.extend(frames)
-                episode_samples.append(frames)
-
+                episode_samples += frames
 
             save_video(
                 frames=episode_samples,
                 video_folder=f"{EvalDirectories.VIDEOS.value}/{run_name}/episode_{training_episode}/video.mp4",
-                fps=10,
+                fps=3,
             )
