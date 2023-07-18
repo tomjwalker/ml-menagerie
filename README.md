@@ -1,5 +1,6 @@
 # rl-menagerie
-Implementations of common reinforcement learning algorithms
+Implementations of common (vanilla) reinforcement learning algorithms, as described in Sutton & Barto. Agents are tested on environments in Gymnasium's Toy Text set.
+
 | Frozen Lake (8x8) | Cliff Walker |
 | --- | --- |
 | ![](./reinforcement_learning/media/fl_es_5000.gif) | ![](./reinforcement_learning/media/cw_ql_2000.gif) |
