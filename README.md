@@ -1,5 +1,13 @@
 # rl-menagerie
 Implementations of common reinforcement learning algorithms
+| Frozen Lake (8x8) | Cliff Walker |
+| --- | --- |
+| ![Video1][v1] | ![Video2][v2] |
+| ![Image1][i1] | ![Image2][i2] |
+[v1]: "./reinforcement_learning/media/es5000.mp4"
+[v2]: "./reinforcement_learning/media/ql2000.mp4"
+[i1]: "./reinforcement_learning/media/es5000.png"
+[i2]: "./reinforcement_learning/media/ql2000.png"
 
 ## 1. Summary
 
