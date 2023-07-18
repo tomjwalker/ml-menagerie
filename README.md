@@ -93,3 +93,4 @@ xxx
 - TODO: refactor training script so that intermediate checkpoints save a full pickle of the agent (currently saving just the Q table, but this is fairly specific for Q-learning-based agents; currently load doesn't work for Double Q Learning agent with multiple Q table attributes)
 - TODO: Tick off more of the tables above. Would be interesting to see optimistic evaluation and model-based planners/learners (Dyna-Q) on a more challenging Frozen Lake (higher hole density). Interesting too to train for the Taxi environment
 - TODO: Sanity check Double Q Learning. Implement simple demo environment in S&B pp. 135 to check it avoids maximisation bias correctly
+- TODO: Check "best_avg_episode_reward" log in runlog is implemented correctly (for Cliff Walker, numbers look suspicious - -ve version of best average episode length)
