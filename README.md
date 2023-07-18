@@ -78,7 +78,7 @@ As with Sutton & Barto, here I did not decay epsilon in the epsilon-greedy actio
     <img src="./reinforcement_learning/media/cliff_walker_cumulative_discounted_return_per_episode.png" alt="Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left;" width="400" />
 </div>
 
-| Frozen Lake (8x8) | Cliff Walker |
+| Q-Learning (after 2000 training episodes) | SARSA (after 2000 training episodes) |
 | --- | --- |
-| ![](./reinforcement_learning/media/fl_es_5000.gif) | ![](./reinforcement_learning/media/cw_ql_2000.gif) |
-| ![](./reinforcement_learning/media/es5000.png) | ![](./reinforcement_learning/media/ql_2000.png) |
+| ![](./reinforcement_learning/media/cw_ql_2000.gif) | ![](./reinforcement_learning/media/cw_sarsa_2000.gif) |
+| ![](./reinforcement_learning/media/ql_2000.png) | ![](./reinforcement_learning/media/cw_sarsa_2000.png) |
