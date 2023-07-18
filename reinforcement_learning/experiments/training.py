@@ -1,15 +1,13 @@
-import gymnasium as gym
-from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 import warnings    # There's an annoying warning in matplotlib to suppress
 import os
 import pandas as pd
 
 from plotting import (plot_q_table, plot_training_metrics_multiple_trials, plot_v_table_with_arrows)
 
-from reinforcement_learning.low_level_implementations.algorithms.agents import QLearningAgent
-from reinforcement_learning.low_level_implementations.algorithms.agents import SarsaAgent
-from reinforcement_learning.low_level_implementations.algorithms.agents import ExpectedSarsaAgent
-from reinforcement_learning.low_level_implementations.algorithms.agents import DoubleQLearningAgent
+from algorithms.agents import QLearningAgent
+from algorithms.agents import SarsaAgent
+from algorithms.agents import ExpectedSarsaAgent
+from algorithms.agents import DoubleQLearningAgent
 
 from metrics import (EpisodeReward, EpisodeLength, DiscountedReturn, CumulativeReward, CumulativeDiscountedReturn)
 from training_configs import TRAINING_CONFIGS
