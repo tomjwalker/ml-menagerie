@@ -158,4 +158,13 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-/supervised_learning/datasets/mnist/datasets/data_cache/
+/supervised_learning/datasets/mnist/data_cache/
+/supervised_learning/experiments/data_cache/
+/supervised_learning/experiments/plots/
+/supervised_learning/experiments/model_checkpoints/
+/reinforcement_learning/experiments/frozen_lake/cache/
+/reinforcement_learning/experiments/frozen_lake/debug_episode_5000.npy
+/reinforcement_learning/experiments/frozen_lake/debug_array.npy
+/reinforcement_learning/experiments/frozen_lake/debug2/
+/reinforcement_learning/experiments/frozen_lake/temp_debug.py
+/reinforcement_learning/experiments/frozen_lake/debug_fl_episode_5000.npy
