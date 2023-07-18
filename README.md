@@ -71,7 +71,9 @@ Double Q-learning updates its 2 Q tables at half-frequency with a coin flip, alt
 
 This environment is introduced in pp. 1323 of Sutton & Barto, the motivation being to demonstrate SARSA taking a safer path (due to waiting for next action A' before updating the value function) than Q learning.
 
-As with Sutton & Barto, here I did not decay epsilon in the epsilon-greedy action selection schedule. Q learning thus performs worse, as it takes the optimal path close to the cliff edge, which pays off the majority of the time (-13 reward, vs -17 for the safer path), but every so often the agent goes **stochastic lemming** for a -100 payoff.
+As with Sutton & Barto, here I did not decay epsilon in the epsilon-greedy action selection schedule. Q learning thus performs worse, as it takes the optimal path close to the cliff edge, which pays off the majority of the time (-13 reward, vs ~-16 for the safer path), but every so often the agent goes **stochastic lemming** for a -100 payoff.
+
+Interestingly, the SARSA agent is slightly more daring here than in Sutton & Barto: it picks a route which is 1- rather than 2-squares offset from the cliff edge.
 
 <div>
     <img src="./reinforcement_learning/media/cliff_walker_discounted_return_per_episode.png" alt="Discounted return per episode. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left; margin-right: 10px;" width="400" />
