@@ -1,4 +1,4 @@
-from plotting import plot_training_metrics_multiple_trials
+from plotting import plot_training_metrics_multiple_trials, plot_v_table_with_arrows
 import numpy as np
 import pickle
 from enum import Enum
@@ -12,6 +12,15 @@ from gymnasium.utils.save_video import save_video
 # Evaluation settings
 # =============================================================================
 
+# EVAL_NAME = "frozen_lake"
+#
+# # Specify runs to inspect
+# RUN_DIRECTORIES = {
+#     "qlearning_eg_0_1": ".cache/75018857-047a-4e6e-ac43-07cf531b8fce",
+#     "sarsa_eg_0_1": ".cache/eb7c8cb6-4b0f-451b-ac41-0dfe7bab1482",
+#     "expected_sarsa_eg_0_1": ".cache/3b040326-06e5-470e-9591-b724d7beb19c",
+# }
+
 EVAL_NAME = "cliff_walker"
 
 # Specify runs to inspect
@@ -24,11 +33,11 @@ METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
 }
 
-X_LIMIT = 500    # None for no limit
+X_LIMIT = 4000    # None for no limit
 
 MAKE_VIDEOS = True
 
-mid_training_episode = 600    # If None, calculates mid-point intermediate episode
+mid_training_episode = 2000    # If None, calculates mid-point intermediate episode
 
 
 class EvalDirectories(Enum):
@@ -136,6 +145,16 @@ if MAKE_VIDEOS:
 
             save_video(
                 frames=episode_samples,
-                video_folder=f"{EvalDirectories.VIDEOS.value}/{run_name}/episode_{training_episode}/video.mp4",
-                fps=3,
+                video_folder=f"{EvalDirectories.VIDEOS.value}/{run_name}/episode_{training_episode}/",
+                fps=10,
             )
+
+            plot_v_table_with_arrows(
+                agent.q_table,
+                action_num_to_str=config.environment_config.action_num_to_str,
+                grid_rows=config.environment_config.env_rows,
+                grid_cols=config.environment_config.env_columns,
+                episode_num=training_episode,
+                save_dir=f"{EvalDirectories.VIDEOS.value}/{run_name}/episode_{training_episode}/"
+            )
+
