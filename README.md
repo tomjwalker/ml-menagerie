@@ -87,18 +87,18 @@ Interestingly, the SARSA agent is slightly more daring here than in Sutton & Bar
 
 ## 4. Usage
 1. In `training_configs.py`:
-    a. Define a list of environment configs in ENVIRONMENT_CONFIGS (can be a list of length 1, or greater)
-    b. Define a list of agent configs in AGENT_CONFIGS (can be a list of length 1, or greater)
-    c. (This script then generates TRAINING_CONFIGS: an outer product of the environment and agent configs)
+    1. Define a list of environment configs in ENVIRONMENT_CONFIGS (can be a list of length 1, or greater)
+    2. Define a list of agent configs in AGENT_CONFIGS (can be a list of length 1, or greater)
+    3. (This script then generates TRAINING_CONFIGS: an outer product of the environment and agent configs)
 2. Run `training.py`:
-    a. This will loop over all specified runs in TRAINING_CONFIGS
-    b. Each run is given a UUID
-    c. Run results are added to a run log in `.../experiments/.cache`
-    d. Intermediate plots and training artefacts are added to a directory (`.../.cache/<run UUID>/`)
+    1. This will loop over all specified runs in TRAINING_CONFIGS
+    2. Each run is given a UUID
+    3. Run results are added to a run log in `.../experiments/.cache`
+    4. Intermediate plots and training artefacts are added to a directory (`.../.cache/<run UUID>/`)
 3. Generate plots and videos of selected sweeps in `evaluation.py`
-    a. Look through the run log in `.cache` to get the desired runs to analyse
-    b. Set `EVAL_NAME`: this is used to create an evaluation directory for the given sweep
-    c. Set `RUN_DIRECTORIES`: a {save_name: run UUID} dictionary specifying the runs to analyse
+    1. Look through the run log in `.cache` to get the desired runs to analyse
+    2. Set `EVAL_NAME`: this is used to create an evaluation directory for the given sweep
+    3. Set `RUN_DIRECTORIES`: a {save_name: run UUID} dictionary specifying the runs to analyse
    
 ## 5. Future work
 - TODO: hyperparameter grid search of behaviour policy parameters (policies in table 1.2). 4-5 settings for learning rate & 4-5 settings for policy parameter (epsilon, or tao temperature parameter for softmax). Plot heatmap of best performance metric (discounted return, averaged across trials) for gridsearch grid
