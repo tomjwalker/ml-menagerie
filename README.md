@@ -37,6 +37,12 @@ Implementations of common reinforcement learning algorithms
 | | Taxi | More complex action space |
 | | Blackjack| More complex MDP |
 
+### 1.4. Initialisation strategy
+| Implemented | Initialisation | Motivation |
+|---|---|---|
+| ✓ | Zero initialisation | Simple baseline |
+| | Optimistic initialisation | Encourages early, more extensive exploration (try with frozen lake (perhaps with higher "hole" density), where current Q table shows little exploration off the beaten track |
+
 ## 2. Frozen Lake
 
 ### 2.1. Agent sweep
