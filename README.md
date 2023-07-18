@@ -84,3 +84,11 @@ Interestingly, the SARSA agent is slightly more daring here than in Sutton & Bar
 | --- | --- |
 | ![](./reinforcement_learning/media/cw_ql_2000.gif) | ![](./reinforcement_learning/media/cw_sarsa_2000.gif) |
 | ![](./reinforcement_learning/media/ql_2000.png) | ![](./reinforcement_learning/media/cw_sarsa_2000.png) |
+
+## 4. Usage
+xxx
+
+## 5. Future work
+a. TODO: hyperparameter grid search of behaviour policy parameters (policies in table 1.2). 4-5 settings for learning rate & 4-5 settings for policy parameter (epsilon, or tao temperature parameter for softmax). Plot heatmap of best performance metric (discounted return, averaged across trials) for gridsearch grid
+b. TODO: refactor training script so that intermediate checkpoints save a full pickle of the agent (currently saving just the Q table, but this is fairly specific for Q-learning-based agents; currently load doesn't work for Double Q Learning agent with multiple Q table attributes)
+c. TODO: Tick off more of the tables above. Would be interesting to see optimistic evaluation and model-based planners/learners (Dyna-Q) on a more challenging Frozen Lake (higher hole density). Interesting too to train for the Taxi environment
