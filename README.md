@@ -2,8 +2,8 @@
 Implementations of common reinforcement learning algorithms
 | Frozen Lake (8x8) | Cliff Walker |
 | --- | --- |
-| <video width="320" height="240" controls><source src="./reinforcement_learning/media/es5000.mp4" type="video/mp4"></video> | <video width="320" height="240" controls><source src="./reinforcement_learning/media/ql2000.mp4" type="video/mp4"></video> |
-| <img src="./reinforcement_learning/media/es5000.png" width="200" height="150"> | <img src="./reinforcement_learning/media/ql2000.png" width="200" height="150"> |
+| ![]("./reinforcement_learning/media/fl_es_5000.gif") |  |
+|  |  |
 
 ## 1. Summary
 
