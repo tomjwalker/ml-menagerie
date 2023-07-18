@@ -42,7 +42,7 @@ Implementations of common (vanilla) reinforcement learning algorithms, as descri
 | Implemented | Initialisation | Motivation |
 |---|---|---|
 | ✓ | Zero initialisation | Simple baseline |
-| | Optimistic initialisation | Encourages early, more extensive exploration (try with frozen lake (perhaps with higher "hole" density), where current Q table shows little exploration off the beaten track) |
+| | Optimistic initialisation | Encourages greater early exploration (try with frozen lake (perhaps with higher "hole" density), where current Q table shows little exploration off the beaten track) |
 
 ## 2. Frozen Lake
 
