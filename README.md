@@ -80,10 +80,10 @@ Interestingly, the SARSA agent is slightly more daring here than in Sutton & Bar
     <img src="./reinforcement_learning/media/cliff_walker_cumulative_discounted_return_per_episode.png" alt="Cumulative reward. Averaged over 10 trials; fill shows 95% confidence interval" style="float: left;" width="400" />
 </div>
 
-| Q-Learning (after 2000 training episodes) | SARSA (after 2000 training episodes) |
-| --- | --- |
-| ![](./reinforcement_learning/media/cw_ql_2000.gif) | ![](./reinforcement_learning/media/cw_sarsa_2000.gif) |
-| ![](./reinforcement_learning/media/ql_2000.png) | ![](./reinforcement_learning/media/cw_sarsa_2000.png) |
+| Q-Learning (after 2000 training episodes) | SARSA (after 2000 training episodes) | Expected SARSA (after 2000 training episodes) |
+| --- | --- | --- |
+| ![](./reinforcement_learning/media/cw_ql_2000.gif) | ![](./reinforcement_learning/media/cw_sarsa_2000.gif) | ![](./reinforcement_learning/media/cw_es_2000.gif) |
+| ![](./reinforcement_learning/media/ql_2000.png) | ![](./reinforcement_learning/media/cw_sarsa_2000.png) | ![](./reinforcement_learning/media/cw_es_2000.png) |
 
 ## 4. Usage
 xxx
