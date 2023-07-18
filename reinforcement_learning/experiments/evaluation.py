@@ -4,7 +4,6 @@ import pickle
 from enum import Enum
 import os
 from collections import defaultdict
-import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 
 
@@ -25,19 +24,20 @@ EVAL_NAME = "cliff_walker"
 
 # Specify runs to inspect
 RUN_DIRECTORIES = {
-    "qlearning_eg_0_1": ".cache/6873c2c5-07b5-4f85-a71d-a37dedfcc7df",
-    "sarsa_eg_0_1": ".cache/beec2c12-8ec0-4319-9db5-57b353d838bf",
+    "qlearning_eg_0_1": ".cache/5c006358-ed94-43e0-a0fb-13a540f2df56",
+    "sarsa_eg_0_1": ".cache/38691845-800c-4ba9-8a3a-36c73d61ca36",
+    "expected_sarsa_eg_0_1": ".cache/04d49c26-9ffa-4662-9f2e-9b7af2c022a3",
 }
 
 METRICS_DIRECTORIES = {
     run_name: f"{run_directory}/data/metrics" for run_name, run_directory in RUN_DIRECTORIES.items()
 }
 
-X_LIMIT = 4000    # None for no limit
+X_LIMIT = 500    # None for no limit
 
 MAKE_VIDEOS = True
 
-mid_training_episode = 2000    # If None, calculates mid-point intermediate episode
+mid_training_episode = 500    # If None, calculates mid-point intermediate episode
 
 
 class EvalDirectories(Enum):
